@@ -263,8 +263,7 @@ export class Game {
 
     // Reset systems
     this.player.reset();
-    this.sceneManager.camera.position.set(0, 4.2, 7.0);
-    this.sceneManager.camera.lookAt(0, 1.6, -10.0);
+    this.sceneManager.resetCamera();
     this.environment.reset();
     this.obstacleManager.reset();
     this.coinManager.reset();
@@ -446,11 +445,8 @@ export class Game {
       // Update Player
       this.player.update(delta, currentSpeed);
 
-      // Dynamic 3rd person camera follow
-      const targetCamX = this.player.mesh.position.x * 0.45;
-      const camDiff = targetCamX - this.sceneManager.camera.position.x;
-      this.sceneManager.camera.position.x += camDiff * Math.min(1.0, 10.0 * delta);
-      this.sceneManager.camera.lookAt(this.player.mesh.position.x * 0.2, 1.6, -10.0);
+      // Dynamic 3rd person cinematic camera follow
+      this.sceneManager.updateCamera(delta, this.player.mesh.position, currentSpeed);
 
       // Update Obstacles & Coins
       this.obstacleManager.update(delta, currentSpeed, difficultyTier, minSpacing);
