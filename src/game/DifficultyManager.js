@@ -1,17 +1,17 @@
 /**
  * DifficultyManager.js
  * Controls progressive game speed, obstacle density, and fair reaction spacing.
+ * Calibrated for comfortable hand-motion reaction times and clear decision making.
  */
 
 export class DifficultyManager {
   constructor() {
-    this.baseSpeed = 18.0;      // Starting runner speed (units/second)
-    this.maxSpeed = 42.0;       // Maximum terminal speed
-    this.speedAcceleration = 0.015; // Speed increase per meter
+    this.baseSpeed = 12.0;      // Comfortable starting speed (units/second)
+    this.maxSpeed = 22.0;       // Smooth capped terminal speed
     this.currentSpeed = this.baseSpeed;
 
-    // Minimum distance between sequential obstacle rows (meters)
-    this.minReactionTime = 0.95; // Seconds of reaction time guaranteed
+    // Generous reaction time guaranteed between obstacles (seconds)
+    this.reactionTimeSeconds = 2.8;
   }
 
   reset() {
@@ -19,10 +19,10 @@ export class DifficultyManager {
   }
 
   update(distance) {
-    // Smooth logarithmic-linear progression curve
+    // Very gentle and smooth speed progression curve
     this.currentSpeed = Math.min(
       this.maxSpeed,
-      this.baseSpeed + Math.sqrt(distance) * 0.55 + distance * 0.008
+      this.baseSpeed + Math.sqrt(distance) * 0.22 + distance * 0.002
     );
     return this.currentSpeed;
   }
@@ -32,14 +32,14 @@ export class DifficultyManager {
   }
 
   getMinObstacleSpacing() {
-    // Distance = speed * reaction time
-    return Math.max(22.0, this.currentSpeed * this.minReactionTime);
+    // Distance = speed * reaction time, with a generous base gap of 48 meters
+    return Math.max(48.0, this.currentSpeed * this.reactionTimeSeconds);
   }
 
   getDifficultyTier() {
-    if (this.currentSpeed < 24) return 1; // Beginner
-    if (this.currentSpeed < 30) return 2; // Moderate
-    if (this.currentSpeed < 36) return 3; // Fast
+    if (this.currentSpeed < 14.5) return 1; // Beginner - single obstacles with huge gaps
+    if (this.currentSpeed < 17.5) return 2; // Moderate
+    if (this.currentSpeed < 20.0) return 3; // Brisk
     return 4; // Expert
   }
 }

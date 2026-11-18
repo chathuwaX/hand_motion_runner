@@ -426,8 +426,7 @@ export class AudioManager {
 
   updateTempo(gameSpeed) {
     // Gradually increase music tempo with game speed
-    // e.g. base speed 18 -> 120 bpm, speed 36 -> 144 bpm
-    const targetTempo = 120 + Math.min(30, (gameSpeed - 18) * 1.2);
+    const targetTempo = 112 + Math.min(28, (gameSpeed - 12) * 2.0);
     this.currentTempo = targetTempo;
   }
 }

@@ -1,6 +1,7 @@
 /**
  * SceneManager.js
  * Manages Three.js scene, camera, lighting, renderer, and viewport resizing.
+ * Vibrant Daytime Sunny Light Theme for maximum obstacle & player contrast.
  */
 
 import * as THREE from 'three';
@@ -23,11 +24,11 @@ export class SceneManager {
   }
 
   init() {
-    // 1. Scene
+    // 1. Scene: Bright sunny daytime blue sky
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0c1424);
-    // Depth atmospheric fog (starts at 40, extends to 280 units)
-    this.scene.fog = new THREE.Fog(0x0c1424, 50, 260);
+    this.scene.background = new THREE.Color(0x76b8ed);
+    // Soft sunny atmospheric horizon haze
+    this.scene.fog = new THREE.Fog(0x99ccf5, 75, 340);
 
     // 2. Camera
     const aspect = window.innerWidth / window.innerHeight;
@@ -46,7 +47,7 @@ export class SceneManager {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.15;
+    this.renderer.toneMappingExposure = 1.25;
 
     this.container.appendChild(this.renderer.domElement);
 
@@ -58,28 +59,28 @@ export class SceneManager {
   }
 
   setupLighting() {
-    // Hemisphere light for natural ambient contrast (Sky: cyan-tinted blue, Ground: dark asphalt)
-    this.hemiLight = new THREE.HemisphereLight(0x4488cc, 0x111122, 0.7);
+    // Hemisphere light for natural sunny sky & warm bounce
+    this.hemiLight = new THREE.HemisphereLight(0x8bc9ff, 0xfff3e0, 0.85);
     this.hemiLight.position.set(0, 50, 0);
     this.scene.add(this.hemiLight);
 
-    // Ambient light
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
+    // Ambient light - high enough to prevent dark unidentifiable obstacles
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
     this.scene.add(this.ambientLight);
 
-    // Key Directional Sun / Spotlight with shadows
-    this.dirLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
-    this.dirLight.position.set(20, 40, 20);
+    // Key Directional Sun with clean shadows
+    this.dirLight = new THREE.DirectionalLight(0xfffaea, 1.35);
+    this.dirLight.position.set(25, 45, 20);
     this.dirLight.castShadow = true;
     this.dirLight.shadow.mapSize.width = 2048;
     this.dirLight.shadow.mapSize.height = 2048;
     this.dirLight.shadow.camera.near = 0.5;
-    this.dirLight.shadow.camera.far = 150;
+    this.dirLight.shadow.camera.far = 160;
     this.dirLight.shadow.camera.left = -25;
     this.dirLight.shadow.camera.right = 25;
     this.dirLight.shadow.camera.top = 35;
     this.dirLight.shadow.camera.bottom = -15;
-    this.dirLight.shadow.bias = -0.0005;
+    this.dirLight.shadow.bias = -0.0004;
 
     this.scene.add(this.dirLight);
     this.scene.add(this.dirLight.target);

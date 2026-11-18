@@ -27,51 +27,51 @@ export class Environment {
   initSharedMaterials() {
     this.materials = {
       ballast: new THREE.MeshStandardMaterial({
-        color: 0x1a2130, // Dark asphalt / gravel ballast
-        roughness: 0.9,
-        metalness: 0.1
+        color: 0xd8e0ec, // Light clean stone / concrete ballast bed for maximum obstacle contrast
+        roughness: 0.85,
+        metalness: 0.05
       }),
       rail: new THREE.MeshStandardMaterial({
-        color: 0x9fa8b8, // Steel chrome rails
-        roughness: 0.25,
+        color: 0x475569, // High-visibility steel rails
+        roughness: 0.2,
         metalness: 0.85
       }),
       sleeper: new THREE.MeshStandardMaterial({
-        color: 0x3d3023, // Weathered railway ties
+        color: 0x8d6e63, // Warm timber railway ties
         roughness: 0.8
       }),
       platform: new THREE.MeshStandardMaterial({
-        color: 0x272c3d, // Concrete platform
+        color: 0xe2e8f0, // Clean light concrete passenger platforms
         roughness: 0.7
       }),
       curbYellow: new THREE.MeshStandardMaterial({
-        color: 0xffcc00, // Warning yellow platform edge
-        roughness: 0.4
+        color: 0xffb703, // Vivid safety curb yellow
+        roughness: 0.3
       }),
       buildingA: new THREE.MeshStandardMaterial({
-        color: 0x121724, // Midnight navy skyscraper
-        roughness: 0.6
+        color: 0xf8fafc, // Crisp modern white skyscraper
+        roughness: 0.5
       }),
       buildingB: new THREE.MeshStandardMaterial({
-        color: 0x1c2336, // Deep slate building
+        color: 0xdbeafe, // Soft sky-blue architectural highrise
         roughness: 0.5
       }),
       windowGlow: new THREE.MeshBasicMaterial({
-        color: 0x55ccff // Cyber neon windows
+        color: 0x93c5fd // Reflective sky-blue daytime windows
       }),
       windowWarm: new THREE.MeshBasicMaterial({
-        color: 0xffaa44 // Warm amber office lights
+        color: 0xc7d2fe // Soft lavender glass reflection
       }),
       gantryMetal: new THREE.MeshStandardMaterial({
-        color: 0x475569, // Steel overhead truss
-        roughness: 0.5,
-        metalness: 0.6
+        color: 0x64748b, // Industrial steel overhead gantries
+        roughness: 0.4,
+        metalness: 0.5
       }),
       signalRed: new THREE.MeshBasicMaterial({
-        color: 0xff2222
+        color: 0xef4444
       }),
       signalGreen: new THREE.MeshBasicMaterial({
-        color: 0x22ff66
+        color: 0x10b981
       })
     };
   }

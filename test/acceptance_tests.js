@@ -255,14 +255,14 @@ console.log('\n--- Test Suite 5: Difficulty & Score Progression ---');
 {
   const diff = new DifficultyManager();
   const initialSpeed = diff.getSpeed();
-  assert(initialSpeed === 18.0, 'Initial running speed starts at 18.0 m/s');
+  assert(initialSpeed === 12.0, 'Initial running speed starts at comfortable 12.0 m/s');
 
   diff.update(500); // After running 500 meters
   const midSpeed = diff.getSpeed();
   assert(midSpeed > initialSpeed && midSpeed < diff.maxSpeed, 'Speed increases smoothly with distance');
 
   const spacing = diff.getMinObstacleSpacing();
-  assert(spacing >= 22.0, 'Maintains fair reaction distance spacing between obstacles');
+  assert(spacing >= 45.0, 'Maintains generous reaction distance spacing between obstacles');
 
   // ScoreManager
   const scoreMgr = new ScoreManager();

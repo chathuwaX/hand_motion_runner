@@ -39,46 +39,50 @@ export class ObstacleManager {
   initMaterials() {
     this.materials = {
       trainBody: new THREE.MeshStandardMaterial({
-        color: 0xd62828, // Crimson Red Subway Train
-        roughness: 0.3,
-        metalness: 0.6
+        color: 0xe11d48, // Vibrant Ruby/Scarlet Train Body
+        roughness: 0.25,
+        metalness: 0.5
       }),
       trainRoof: new THREE.MeshStandardMaterial({
-        color: 0x222222,
-        roughness: 0.6
+        color: 0x334155, // Contrasting Slate Roof
+        roughness: 0.5
       }),
       trainStripe: new THREE.MeshStandardMaterial({
-        color: 0xfdf0d5, // Cream stripe
-        roughness: 0.4
+        color: 0xffffff, // Crisp White Racing Stripe
+        roughness: 0.2
       }),
       trainWindow: new THREE.MeshStandardMaterial({
-        color: 0x003049,
+        color: 0x0f172a, // Deep Tinted Glass
         roughness: 0.1,
         metalness: 0.9
       }),
       headlight: new THREE.MeshBasicMaterial({
-        color: 0xffffff
+        color: 0xfff07c // Bright Glowing Yellow Headlights
       }),
       barrierPost: new THREE.MeshStandardMaterial({
-        color: 0x333333,
-        roughness: 0.5
+        color: 0x1e293b,
+        roughness: 0.4
       }),
       barrierStripeRed: new THREE.MeshStandardMaterial({
-        color: 0xe63946,
-        roughness: 0.4
+        color: 0xdc2626, // Vivid Warning Red
+        roughness: 0.3
       }),
       barrierStripeWhite: new THREE.MeshStandardMaterial({
-        color: 0xf1faee,
-        roughness: 0.4
+        color: 0xffffff, // Pure High-Contrast White
+        roughness: 0.3
       }),
       overheadBeam: new THREE.MeshStandardMaterial({
-        color: 0xfca311, // Warning industrial yellow
-        roughness: 0.4,
-        metalness: 0.5
+        color: 0xf59e0b, // Vivid Amber / Industrial Caution Yellow
+        roughness: 0.3,
+        metalness: 0.3
       }),
       hazardStripe: new THREE.MeshStandardMaterial({
-        color: 0x14213d,
-        roughness: 0.5
+        color: 0x0f172a, // Pitch Black Caution Diagonal Stripe
+        roughness: 0.4
+      }),
+      roadblockOrange: new THREE.MeshStandardMaterial({
+        color: 0xff6b00, // Vivid Safety Neon Orange
+        roughness: 0.3
       })
     };
   }
@@ -243,7 +247,7 @@ export class ObstacleManager {
     const height = 1.4;
 
     const baseGeo = new THREE.BoxGeometry(width, height * 0.7, 0.3);
-    const baseMesh = new THREE.Mesh(baseGeo, this.materials.overheadBeam);
+    const baseMesh = new THREE.Mesh(baseGeo, this.materials.roadblockOrange);
     baseMesh.position.y = height * 0.4;
     baseMesh.castShadow = true;
     group.add(baseMesh);
@@ -373,7 +377,7 @@ export class ObstacleManager {
     for (let i = this.activeObstacles.length - 1; i >= 0; i--) {
       this.despawnObstacle(i);
     }
-    // Give player a short comfortable initial runway before first obstacle row spawns
-    this.distanceSinceLastSpawn = 0;
+    // Give player a generous runway on game start before first obstacle row spawns
+    this.distanceSinceLastSpawn = -25.0;
   }
 }
