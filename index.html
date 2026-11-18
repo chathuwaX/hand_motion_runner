@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#08111f" />
+    <title>Hand Motion Runner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main id="game">
+      <div id="scene" aria-label="3D endless runner"></div>
+
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">H</span>
+          <span>HAND RUNNER</span>
+        </div>
+        <div class="scoreboard">
+          <div class="stat">
+            <span class="stat-label">SCORE</span>
+            <strong id="score">000000</strong>
+          </div>
+          <div class="stat">
+            <span class="stat-label">BEST</span>
+            <strong id="best">000000</strong>
+          </div>
+          <button id="soundButton" class="icon-button" aria-label="Toggle sound" title="Toggle sound">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5l4.5 4V5Zm4.5 3.5a5 5 0 0 1 0 7M18 6a8 8 0 0 1 0 12"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <aside class="camera-card">
+        <div class="camera-heading">
+          <span><i></i> LIVE TRACKING</span>
+          <span id="trackingStatus">CONNECTING</span>
+        </div>
+        <div class="camera-wrap">
+          <video id="webcam" playsinline muted></video>
+          <canvas id="trackingCanvas"></canvas>
+          <div id="cameraPlaceholder">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 10l4.5-2.7A1.5 1.5 0 0122 8.6v6.8a1.5 1.5 0 01-2.5 1.3L15 14M3 7h9a2 2 0 012 2v6a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z"/></svg>
+            <span>CAMERA OFF</span>
+          </div>
+        </div>
+        <div class="gesture">
+          <span class="gesture-icon">☝</span>
+          <div>
+            <strong id="gestureName">RAISE HAND</strong>
+            <small id="gestureHint">Waiting for gesture</small>
+          </div>
+        </div>
+      </aside>
+
+      <div class="controls" aria-label="Keyboard controls">
+        <div><kbd>←</kbd><kbd>→</kbd><span>MOVE</span></div>
+        <div><kbd>↑</kbd><span>JUMP</span></div>
+        <div><kbd>↓</kbd><span>SLIDE</span></div>
+      </div>
+
+      <div id="startScreen" class="overlay">
+        <div class="start-panel">
+          <p class="eyebrow">WEBCAM CONTROLLED</p>
+          <h1>HAND<br/><em>MOTION</em><br/>RUNNER</h1>
+          <p class="subtitle">Move your hand to dodge obstacles</p>
+          <button id="startButton" class="start-button">
+            <span>START RUN</span>
+            <small>Enable camera</small>
+          </button>
+        </div>
+      </div>
+
+      <div id="gameOver" class="overlay hidden">
+        <div class="game-over-panel">
+          <p class="eyebrow">RUN ENDED</p>
+          <h2>CRASHED!</h2>
+          <p>Score <strong id="finalScore">000000</strong></p>
+          <button id="restartButton" class="start-button"><span>RUN AGAIN</span></button>
+        </div>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"
+        }
+      }
+    </script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
