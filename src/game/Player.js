@@ -1,7 +1,9 @@
 /**
  * Player.js
- * 3D Animated Runner Character with procedural geometry,
- * smooth lane interpolation, jumping, sliding, and dynamic bounding box collision volume.
+ * Realistic, Natural Human Runner Character with authentic human proportions,
+ * articulated joints (hips, knees, ankles, shoulders, elbows, wrists, neck),
+ * natural biomechanical running gait (knee flexion, arm pumping, pelvic sway, torso counter-rotation),
+ * athletic apparel, running sneakers, and dynamic collision bounding volumes.
  */
 
 import * as THREE from 'three';
@@ -32,7 +34,7 @@ export class Player {
     this.runAnimTime = 0;
     this.isDead = false;
 
-    // Bounding Box for collisions
+    // Bounding Box for collisions (Human proportions: ~1.85m tall)
     this.box = new THREE.Box3();
     this.normalBoxSize = new THREE.Vector3(1.1, 2.1, 1.0);
     this.slideBoxSize = new THREE.Vector3(1.1, 0.8, 1.5);
@@ -42,151 +44,410 @@ export class Player {
     this.mesh = new THREE.Group();
     this.mesh.position.set(0, 0, 0);
 
-    // Build procedural stylized runner character
+    // Build anatomical natural human runner character
     this.buildCharacter();
 
     this.scene.add(this.mesh);
   }
 
   buildCharacter() {
-    // Materials
-    const hoodieMat = new THREE.MeshStandardMaterial({
-      color: 0x00d2ff, // Bright Cyan hoodie
-      roughness: 0.4,
+    // -------------------------------------------------------------
+    // Natural Materials with realistic PBR properties
+    // -------------------------------------------------------------
+    // Skin: Warm, natural human skin tone with soft micro-roughness
+    const skinMat = new THREE.MeshStandardMaterial({
+      color: 0xebaf88,
+      roughness: 0.65,
+      metalness: 0.05
+    });
+
+    // Dark styled natural hair
+    const hairMat = new THREE.MeshStandardMaterial({
+      color: 0x241812,
+      roughness: 0.85,
+      metalness: 0.05
+    });
+
+    // Athletic technical running singlet / top (Vibrant electric cobalt with breathable weave)
+    const jerseyMat = new THREE.MeshStandardMaterial({
+      color: 0x0284c7, // Vivid athletic cyan-blue
+      roughness: 0.45,
       metalness: 0.1
     });
 
-    const pantsMat = new THREE.MeshStandardMaterial({
-      color: 0x1f2430, // Dark navy joggers
-      roughness: 0.6
+    // Jersey trim & reflective accents
+    const jerseyTrimMat = new THREE.MeshStandardMaterial({
+      color: 0xf8fafc,
+      roughness: 0.25,
+      metalness: 0.3
     });
 
-    const skinMat = new THREE.MeshStandardMaterial({
-      color: 0xffcb9a, // Warm skin tone
-      roughness: 0.7
+    // Athletic compression running shorts (Dark charcoal slate)
+    const shortsMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      roughness: 0.6,
+      metalness: 0.05
     });
 
-    const capMat = new THREE.MeshStandardMaterial({
-      color: 0xff0055, // Vibrant magenta backwards cap
+    // Running sneaker mesh upper (High-contrast bright crimson / coral)
+    const shoeUpperMat = new THREE.MeshStandardMaterial({
+      color: 0xf43f5e,
       roughness: 0.4
     });
 
-    const shoeMat = new THREE.MeshStandardMaterial({
-      color: 0xffffff, // White sneakers with neon accents
-      roughness: 0.3
+    // Sneaker thick foam midsole (Clean cushioned white)
+    const shoeSoleMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.35,
+      metalness: 0.05
     });
 
-    const visorMat = new THREE.MeshStandardMaterial({
-      color: 0x111111,
-      roughness: 0.1,
+    // Rubber sneaker outsole tread
+    const shoeTreadMat = new THREE.MeshStandardMaterial({
+      color: 0x0f172a,
+      roughness: 0.8
+    });
+
+    // Aerodynamic sports wrap sunglasses (Sleek mirrored iridium)
+    const sunglassFrameMat = new THREE.MeshStandardMaterial({
+      color: 0x0f172a,
+      roughness: 0.2,
       metalness: 0.8
     });
+    const sunglassLensMat = new THREE.MeshStandardMaterial({
+      color: 0x06b6d4, // Cyan iridescent mirrored sheen
+      roughness: 0.05,
+      metalness: 0.95
+    });
 
-    // 1. Torso Group
+    // -------------------------------------------------------------
+    // Pelvis & Root Hierarchy
+    // -------------------------------------------------------------
+    // The pelvis acts as the biomechanical root of human gait
+    this.pelvisGroup = new THREE.Group();
+    this.pelvisGroup.position.y = 1.02; // Hip center at ~1.02m height
+    this.mesh.add(this.pelvisGroup);
+
+    // Pelvis mesh (running shorts waist & hips)
+    const pelvisGeo = new THREE.CylinderGeometry(0.24, 0.21, 0.22, 16);
+    const pelvisMesh = new THREE.Mesh(pelvisGeo, shortsMat);
+    pelvisMesh.position.y = 0;
+    pelvisMesh.castShadow = true;
+    this.pelvisGroup.add(pelvisMesh);
+
+    // Shorts leg cuffs
+    const cuffGeo = new THREE.CylinderGeometry(0.125, 0.12, 0.12, 16);
+    const leftCuff = new THREE.Mesh(cuffGeo, shortsMat);
+    leftCuff.position.set(-0.13, -0.12, 0);
+    this.pelvisGroup.add(leftCuff);
+
+    const rightCuff = new THREE.Mesh(cuffGeo, shortsMat);
+    rightCuff.position.set(0.13, -0.12, 0);
+    this.pelvisGroup.add(rightCuff);
+
+    // -------------------------------------------------------------
+    // Torso (Spine, Ribcage & Shoulders)
+    // -------------------------------------------------------------
     this.torsoGroup = new THREE.Group();
-    this.torsoGroup.position.y = 1.05;
+    this.torsoGroup.position.set(0, 0.10, 0);
+    this.pelvisGroup.add(this.torsoGroup);
 
-    const torsoGeo = new THREE.BoxGeometry(0.72, 0.85, 0.44);
-    this.torsoMesh = new THREE.Mesh(torsoGeo, hoodieMat);
-    this.torsoMesh.castShadow = true;
-    this.torsoGroup.add(this.torsoMesh);
+    // Abdomen / Midsection (tapered waist)
+    const waistGeo = new THREE.CylinderGeometry(0.23, 0.21, 0.24, 16);
+    const waistMesh = new THREE.Mesh(waistGeo, jerseyMat);
+    waistMesh.position.y = 0.12;
+    waistMesh.castShadow = true;
+    this.torsoGroup.add(waistMesh);
 
-    // 2. Head Group
+    // Chest & Ribcage (athletic V-taper broadening at shoulders)
+    const chestGeo = new THREE.CylinderGeometry(0.27, 0.23, 0.32, 16);
+    const chestMesh = new THREE.Mesh(chestGeo, jerseyMat);
+    chestMesh.position.y = 0.38;
+    chestMesh.scale.set(1.15, 1.0, 0.85); // Flatten slightly in depth for realistic human ribcage
+    chestMesh.castShadow = true;
+    this.torsoGroup.add(chestMesh);
+
+    // Reflective athletic racing stripes across jersey
+    const stripeGeo = new THREE.BoxGeometry(0.48, 0.04, 0.38);
+    const stripeMesh = new THREE.Mesh(stripeGeo, jerseyTrimMat);
+    stripeMesh.position.set(0, 0.42, 0);
+    this.torsoGroup.add(stripeMesh);
+
+    // Runner race bib number on chest
+    const bibGeo = new THREE.PlaneGeometry(0.24, 0.18);
+    const bibMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.3
+    });
+    const bibMesh = new THREE.Mesh(bibGeo, bibMat);
+    bibMesh.position.set(0, 0.36, -0.19);
+    bibMesh.rotation.y = Math.PI; // Facing forward (-Z in runner view)
+    this.torsoGroup.add(bibMesh);
+
+    // -------------------------------------------------------------
+    // Neck & Head
+    // -------------------------------------------------------------
+    this.neckGroup = new THREE.Group();
+    this.neckGroup.position.set(0, 0.54, 0);
+    this.torsoGroup.add(this.neckGroup);
+
+    // Neck cylinder
+    const neckGeo = new THREE.CylinderGeometry(0.09, 0.10, 0.14, 16);
+    const neckMesh = new THREE.Mesh(neckGeo, skinMat);
+    neckMesh.position.y = 0.07;
+    neckMesh.castShadow = true;
+    this.neckGroup.add(neckMesh);
+
+    // Head Group
     this.headGroup = new THREE.Group();
-    this.headGroup.position.y = 0.65;
+    this.headGroup.position.set(0, 0.16, 0);
+    this.neckGroup.add(this.headGroup);
 
-    const headGeo = new THREE.BoxGeometry(0.44, 0.44, 0.44);
+    // Anatomical head (rounded cranium tapering to jaw)
+    const headGeo = new THREE.SphereGeometry(0.18, 20, 20);
     const headMesh = new THREE.Mesh(headGeo, skinMat);
+    headMesh.scale.set(0.9, 1.15, 1.05); // Realistic human facial proportions
+    headMesh.position.y = 0.14;
     headMesh.castShadow = true;
     this.headGroup.add(headMesh);
 
-    // Cap
-    const capGeo = new THREE.BoxGeometry(0.48, 0.18, 0.48);
-    const capMesh = new THREE.Mesh(capGeo, capMat);
-    capMesh.position.y = 0.16;
-    capMesh.castShadow = true;
-    this.headGroup.add(capMesh);
+    // Styled athletic cropped hair (crown and sides)
+    const hairCrownGeo = new THREE.SphereGeometry(0.195, 18, 18, 0, Math.PI * 2, 0, Math.PI * 0.58);
+    const hairCrownMesh = new THREE.Mesh(hairCrownGeo, hairMat);
+    hairCrownMesh.scale.set(0.92, 1.12, 1.08);
+    hairCrownMesh.position.y = 0.17;
+    hairCrownMesh.castShadow = true;
+    this.headGroup.add(hairCrownMesh);
 
-    // Cap brim pointing backward
-    const brimGeo = new THREE.BoxGeometry(0.44, 0.05, 0.25);
-    const brimMesh = new THREE.Mesh(brimGeo, capMat);
-    brimMesh.position.set(0, 0.1, 0.32);
-    brimMesh.castShadow = true;
-    this.headGroup.add(brimMesh);
+    // Athletic runner headband
+    const bandGeo = new THREE.TorusGeometry(0.18, 0.025, 12, 24);
+    const bandMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.4
+    });
+    const bandMesh = new THREE.Mesh(bandGeo, bandMat);
+    bandMesh.rotation.x = Math.PI / 2;
+    bandMesh.scale.set(0.92, 1.05, 1.0);
+    bandMesh.position.y = 0.21;
+    this.headGroup.add(bandMesh);
 
-    // Stylish sunglasses / visor
-    const visorGeo = new THREE.BoxGeometry(0.40, 0.10, 0.08);
-    const visorMesh = new THREE.Mesh(visorGeo, visorMat);
-    visorMesh.position.set(0, 0.04, -0.22);
-    this.headGroup.add(visorMesh);
+    // Wrap-around sports sunglasses
+    const sunglassFrameGeo = new THREE.BoxGeometry(0.32, 0.05, 0.14);
+    const sunglassFrame = new THREE.Mesh(sunglassFrameGeo, sunglassFrameMat);
+    sunglassFrame.position.set(0, 0.17, -0.14);
+    this.headGroup.add(sunglassFrame);
 
-    this.torsoGroup.add(this.headGroup);
+    const sunglassLensGeo = new THREE.BoxGeometry(0.30, 0.045, 0.02);
+    const sunglassLens = new THREE.Mesh(sunglassLensGeo, sunglassLensMat);
+    sunglassLens.position.set(0, 0.17, -0.21);
+    this.headGroup.add(sunglassLens);
 
-    // 3. Left Arm
-    this.leftArmGroup = new THREE.Group();
-    this.leftArmGroup.position.set(-0.48, 0.32, 0);
-    const armGeo = new THREE.BoxGeometry(0.2, 0.68, 0.2);
-    const leftArmMesh = new THREE.Mesh(armGeo, hoodieMat);
-    leftArmMesh.position.y = -0.28;
-    leftArmMesh.castShadow = true;
-    this.leftArmGroup.add(leftArmMesh);
-    this.torsoGroup.add(this.leftArmGroup);
+    // -------------------------------------------------------------
+    // Articulated Upper Limbs (Shoulder -> Bicep -> Elbow -> Forearm -> Hand)
+    // -------------------------------------------------------------
+    const armRadius = 0.062;
+    const forearmRadius = 0.055;
+    const upperArmLength = 0.32;
+    const forearmLength = 0.30;
 
-    // 4. Right Arm
-    this.rightArmGroup = new THREE.Group();
-    this.rightArmGroup.position.set(0.48, 0.32, 0);
-    const rightArmMesh = new THREE.Mesh(armGeo, hoodieMat);
-    rightArmMesh.position.y = -0.28;
-    rightArmMesh.castShadow = true;
-    this.rightArmGroup.add(rightArmMesh);
-    this.torsoGroup.add(this.rightArmGroup);
+    // Build Left Arm Hierarchy
+    this.leftShoulder = new THREE.Group();
+    this.leftShoulder.position.set(-0.31, 0.48, 0);
+    this.torsoGroup.add(this.leftShoulder);
 
-    this.mesh.add(this.torsoGroup);
+    // Shoulder cap joint
+    const shoulderCapGeo = new THREE.SphereGeometry(armRadius * 1.15, 14, 14);
+    const leftShoulderCap = new THREE.Mesh(shoulderCapGeo, jerseyMat);
+    this.leftShoulder.add(leftShoulderCap);
 
-    // 5. Left Leg
-    this.leftLegGroup = new THREE.Group();
-    this.leftLegGroup.position.set(-0.22, 0.98, 0);
-    const legGeo = new THREE.BoxGeometry(0.24, 0.75, 0.24);
-    const leftLegMesh = new THREE.Mesh(legGeo, pantsMat);
-    leftLegMesh.position.y = -0.32;
-    leftLegMesh.castShadow = true;
-    this.leftLegGroup.add(leftLegMesh);
+    // Left Upper Arm (Bicep/Tricep)
+    const upperArmGeo = new THREE.CylinderGeometry(armRadius * 0.9, armRadius, upperArmLength, 14);
+    const leftUpperArm = new THREE.Mesh(upperArmGeo, skinMat);
+    leftUpperArm.position.y = -upperArmLength / 2;
+    leftUpperArm.castShadow = true;
+    this.leftShoulder.add(leftUpperArm);
 
-    // Left Shoe
-    const shoeGeo = new THREE.BoxGeometry(0.26, 0.18, 0.42);
-    const leftShoe = new THREE.Mesh(shoeGeo, shoeMat);
-    leftShoe.position.set(0, -0.72, -0.06);
-    leftShoe.castShadow = true;
-    this.leftLegGroup.add(leftShoe);
-    this.mesh.add(this.leftLegGroup);
+    // Left Elbow Joint (Child of shoulder, placed at bottom of upper arm)
+    this.leftElbow = new THREE.Group();
+    this.leftElbow.position.y = -upperArmLength;
+    this.leftShoulder.add(this.leftElbow);
 
-    // 6. Right Leg
-    this.rightLegGroup = new THREE.Group();
-    this.rightLegGroup.position.set(0.22, 0.98, 0);
-    const rightLegMesh = new THREE.Mesh(legGeo, pantsMat);
-    rightLegMesh.position.y = -0.32;
-    rightLegMesh.castShadow = true;
-    this.rightLegGroup.add(rightLegMesh);
+    const elbowJointGeo = new THREE.SphereGeometry(forearmRadius * 1.05, 12, 12);
+    const leftElbowJoint = new THREE.Mesh(elbowJointGeo, skinMat);
+    this.leftElbow.add(leftElbowJoint);
 
-    // Right Shoe
-    const rightShoe = new THREE.Mesh(shoeGeo, shoeMat);
-    rightShoe.position.set(0, -0.72, -0.06);
-    rightShoe.castShadow = true;
-    this.rightLegGroup.add(rightShoe);
-    this.mesh.add(this.rightLegGroup);
+    // Left Forearm
+    const forearmGeo = new THREE.CylinderGeometry(forearmRadius, forearmRadius * 0.85, forearmLength, 14);
+    const leftForearm = new THREE.Mesh(forearmGeo, skinMat);
+    leftForearm.position.y = -forearmLength / 2;
+    leftForearm.castShadow = true;
+    this.leftElbow.add(leftForearm);
 
-    // Shadow blob projector underneath player
-    const shadowGeo = new THREE.PlaneGeometry(1.2, 1.2);
+    // Left Hand (Curled athletic runner fist)
+    const fistGeo = new THREE.SphereGeometry(0.065, 14, 14);
+    const leftFist = new THREE.Mesh(fistGeo, skinMat);
+    leftFist.scale.set(0.85, 1.15, 1.25);
+    leftFist.position.set(0, -forearmLength - 0.04, 0);
+    leftFist.castShadow = true;
+    this.leftElbow.add(leftFist);
+
+    // Build Right Arm Hierarchy
+    this.rightShoulder = new THREE.Group();
+    this.rightShoulder.position.set(0.31, 0.48, 0);
+    this.torsoGroup.add(this.rightShoulder);
+
+    const rightShoulderCap = new THREE.Mesh(shoulderCapGeo, jerseyMat);
+    this.rightShoulder.add(rightShoulderCap);
+
+    const rightUpperArm = new THREE.Mesh(upperArmGeo, skinMat);
+    rightUpperArm.position.y = -upperArmLength / 2;
+    rightUpperArm.castShadow = true;
+    this.rightShoulder.add(rightUpperArm);
+
+    this.rightElbow = new THREE.Group();
+    this.rightElbow.position.y = -upperArmLength;
+    this.rightShoulder.add(this.rightElbow);
+
+    const rightElbowJoint = new THREE.Mesh(elbowJointGeo, skinMat);
+    this.rightElbow.add(rightElbowJoint);
+
+    const rightForearm = new THREE.Mesh(forearmGeo, skinMat);
+    rightForearm.position.y = -forearmLength / 2;
+    rightForearm.castShadow = true;
+    this.rightElbow.add(rightForearm);
+
+    const rightFist = new THREE.Mesh(fistGeo, skinMat);
+    rightFist.scale.set(0.85, 1.15, 1.25);
+    rightFist.position.set(0, -forearmLength - 0.04, 0);
+    rightFist.castShadow = true;
+    this.rightElbow.add(rightFist);
+
+    // Set natural runner default elbow bend (~85° forward flexion)
+    this.leftElbow.rotation.x = 1.45;
+    this.rightElbow.rotation.x = 1.45;
+    // Slight inward forearm cant
+    this.leftElbow.rotation.z = -0.18;
+    this.rightElbow.rotation.z = 0.18;
+
+    // -------------------------------------------------------------
+    // Articulated Lower Limbs (Hip -> Thigh -> Knee -> Calf/Shin -> Ankle -> Sneaker)
+    // -------------------------------------------------------------
+    const thighRadiusTop = 0.12;
+    const thighRadiusBottom = 0.095;
+    const thighLength = 0.46;
+    const shinRadiusTop = 0.09;
+    const shinRadiusBottom = 0.07;
+    const shinLength = 0.46;
+
+    // Left Leg
+    this.leftHip = new THREE.Group();
+    this.leftHip.position.set(-0.14, -0.10, 0);
+    this.pelvisGroup.add(this.leftHip);
+
+    // Left Thigh (Quadricep / Hamstring)
+    const thighGeo = new THREE.CylinderGeometry(thighRadiusTop, thighRadiusBottom, thighLength, 16);
+    const leftThigh = new THREE.Mesh(thighGeo, skinMat);
+    leftThigh.position.y = -thighLength / 2;
+    leftThigh.castShadow = true;
+    this.leftHip.add(leftThigh);
+
+    // Left Knee Joint (Child of Hip)
+    this.leftKnee = new THREE.Group();
+    this.leftKnee.position.y = -thighLength;
+    this.leftHip.add(this.leftKnee);
+
+    const kneeJointGeo = new THREE.SphereGeometry(shinRadiusTop * 1.05, 14, 14);
+    const leftKneeJoint = new THREE.Mesh(kneeJointGeo, skinMat);
+    this.leftKnee.add(leftKneeJoint);
+
+    // Left Shin & Calf (Gastrocnemius contour)
+    const shinGeo = new THREE.CylinderGeometry(shinRadiusTop, shinRadiusBottom, shinLength, 16);
+    const leftShin = new THREE.Mesh(shinGeo, skinMat);
+    leftShin.position.y = -shinLength / 2;
+    leftShin.castShadow = true;
+    this.leftKnee.add(leftShin);
+
+    // Left Ankle & Sneaker Foot
+    this.leftFoot = new THREE.Group();
+    this.leftFoot.position.set(0, -shinLength, 0);
+    this.leftKnee.add(this.leftFoot);
+    this.leftFoot.add(this.createRunningSneaker(shoeUpperMat, shoeSoleMat, shoeTreadMat));
+
+    // Right Leg
+    this.rightHip = new THREE.Group();
+    this.rightHip.position.set(0.14, -0.10, 0);
+    this.pelvisGroup.add(this.rightHip);
+
+    const rightThigh = new THREE.Mesh(thighGeo, skinMat);
+    rightThigh.position.y = -thighLength / 2;
+    rightThigh.castShadow = true;
+    this.rightHip.add(rightThigh);
+
+    this.rightKnee = new THREE.Group();
+    this.rightKnee.position.y = -thighLength;
+    this.rightHip.add(this.rightKnee);
+
+    const rightKneeJoint = new THREE.Mesh(kneeJointGeo, skinMat);
+    this.rightKnee.add(rightKneeJoint);
+
+    const rightShin = new THREE.Mesh(shinGeo, skinMat);
+    rightShin.position.y = -shinLength / 2;
+    rightShin.castShadow = true;
+    this.rightKnee.add(rightShin);
+
+    this.rightFoot = new THREE.Group();
+    this.rightFoot.position.set(0, -shinLength, 0);
+    this.rightKnee.add(this.rightFoot);
+    this.rightFoot.add(this.createRunningSneaker(shoeUpperMat, shoeSoleMat, shoeTreadMat));
+
+    // -------------------------------------------------------------
+    // Ground Shadow Blob Projector
+    // -------------------------------------------------------------
+    const shadowGeo = new THREE.PlaneGeometry(1.2, 1.6);
     const shadowMat = new THREE.MeshBasicMaterial({
       color: 0x000000,
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.40,
       depthWrite: false
     });
     this.shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
     this.shadowMesh.rotation.x = -Math.PI / 2;
     this.shadowMesh.position.y = 0.02;
     this.scene.add(this.shadowMesh);
+  }
+
+  createRunningSneaker(upperMat, soleMat, treadMat) {
+    const sneakerGroup = new THREE.Group();
+
+    // 1. Thick Cushioned Midsole (flared runner heel rocker)
+    const soleGeo = new THREE.BoxGeometry(0.17, 0.08, 0.36);
+    const soleMesh = new THREE.Mesh(soleGeo, soleMat);
+    soleMesh.position.set(0, 0.04, -0.05);
+    soleMesh.castShadow = true;
+    sneakerGroup.add(soleMesh);
+
+    // 2. Beveled toe rocker wedge
+    const toeGeo = new THREE.CylinderGeometry(0.08, 0.085, 0.16, 12, 1, false, 0, Math.PI);
+    const toeMesh = new THREE.Mesh(toeGeo, soleMat);
+    toeMesh.rotation.z = Math.PI / 2;
+    toeMesh.rotation.y = -Math.PI / 2;
+    toeMesh.position.set(0, 0.05, -0.22);
+    sneakerGroup.add(toeMesh);
+
+    // 3. Sneaker Upper (aerodynamic mesh)
+    const upperGeo = new THREE.BoxGeometry(0.155, 0.11, 0.31);
+    const upperMesh = new THREE.Mesh(upperGeo, upperMat);
+    upperMesh.position.set(0, 0.11, -0.05);
+    upperMesh.castShadow = true;
+    sneakerGroup.add(upperMesh);
+
+    // 4. Outsole Dark Traction Tread
+    const treadGeo = new THREE.BoxGeometry(0.175, 0.02, 0.37);
+    const treadMesh = new THREE.Mesh(treadGeo, treadMat);
+    treadMesh.position.set(0, 0.01, -0.05);
+    sneakerGroup.add(treadMesh);
+
+    return sneakerGroup;
   }
 
   reset() {
@@ -256,12 +517,18 @@ export class Player {
   endSlide() {
     this.isSliding = false;
     this.slideTimer = 0;
+    this.pelvisGroup.position.set(0, 1.02, 0);
+    this.pelvisGroup.rotation.set(0, 0, 0);
+    this.torsoGroup.position.set(0, 0.10, 0);
     this.torsoGroup.rotation.set(0, 0, 0);
-    this.torsoGroup.position.set(0, 1.05, 0);
-    this.leftLegGroup.position.set(-0.22, 0.98, 0);
-    this.rightLegGroup.position.set(0.22, 0.98, 0);
-    this.leftLegGroup.rotation.set(0, 0, 0);
-    this.rightLegGroup.rotation.set(0, 0, 0);
+    this.leftHip.rotation.set(0, 0, 0);
+    this.rightHip.rotation.set(0, 0, 0);
+    this.leftKnee.rotation.set(0, 0, 0);
+    this.rightKnee.rotation.set(0, 0, 0);
+    this.leftShoulder.rotation.set(0, 0, 0);
+    this.rightShoulder.rotation.set(0, 0, 0);
+    this.leftElbow.rotation.set(1.45, 0, -0.18);
+    this.rightElbow.rotation.set(1.45, 0, 0.18);
   }
 
   update(delta, currentSpeed) {
@@ -272,12 +539,12 @@ export class Player {
     const diffX = targetX - this.mesh.position.x;
     this.mesh.position.x += diffX * Math.min(1.0, this.laneTransitionSpeed * delta);
 
-    // Subtle banking/lean tilt based on horizontal velocity
-    const bankAngle = -diffX * 0.12;
+    // Natural athletic banking and lateral lean into lane transitions
+    const bankAngle = -diffX * 0.14;
     this.mesh.rotation.z = bankAngle;
     this.mesh.rotation.y = -diffX * 0.08;
 
-    // 2. Handle Jump
+    // 2. Handle Jump with realistic parabolic arc and airborne kinetics
     if (this.isJumping) {
       this.jumpTimer += delta;
       const progress = this.jumpTimer / this.jumpDuration;
@@ -294,77 +561,124 @@ export class Player {
       this.mesh.position.y = 0;
     }
 
-    // 3. Handle Slide
+    // 3. Handle Slide (Authentic athletic baseball slide)
     if (this.isSliding) {
       this.slideTimer += delta;
       if (this.slideTimer >= this.slideDuration) {
         this.endSlide();
       } else {
-        // Drop torso low and lean backward
-        this.torsoGroup.position.y = 0.5;
-        this.torsoGroup.position.z = 0.3;
-        this.torsoGroup.rotation.x = -Math.PI / 3; // Leaned back
+        // Drop pelvis low to track surface and lean torso back
+        this.pelvisGroup.position.y = 0.40;
+        this.pelvisGroup.rotation.x = -Math.PI / 4; // ~45 deg backward slide lean
 
-        // Legs extended straight forward
-        this.leftLegGroup.position.y = 0.35;
-        this.rightLegGroup.position.y = 0.35;
-        this.leftLegGroup.rotation.x = -Math.PI / 2.3;
-        this.rightLegGroup.rotation.x = -Math.PI / 2.3;
+        // Lead leg (right leg) extended straight forward skimming the track
+        this.rightHip.rotation.x = -Math.PI / 2.2;
+        this.rightKnee.rotation.x = 0.05;
 
-        // Arms thrown out for balance
-        this.leftArmGroup.rotation.x = 0.4;
-        this.rightArmGroup.rotation.x = 0.4;
+        // Trail leg (left leg) tucked neatly under hip
+        this.leftHip.rotation.x = -0.4;
+        this.leftKnee.rotation.x = 1.6;
+
+        // Arms thrown out for balance during slide
+        this.leftShoulder.rotation.x = 0.4;
+        this.rightShoulder.rotation.x = 0.4;
+        this.leftElbow.rotation.x = 0.8;
+        this.rightElbow.rotation.x = 0.8;
       }
     }
 
-    // 4. Procedural Running Animation (when neither jumping nor sliding)
+    // 4. Natural Biomechanical Running Kinematics (when running on ground)
     if (!this.isJumping && !this.isSliding) {
-      this.runAnimTime += delta * (currentSpeed * 0.65);
-      const swing = Math.sin(this.runAnimTime);
+      // Running cadence scales realistically with current track speed
+      this.runAnimTime += delta * (currentSpeed * 0.70);
+      const phase = this.runAnimTime;
 
-      // Legs swing forward and backward
-      this.leftLegGroup.rotation.x = swing * 0.75;
-      this.rightLegGroup.rotation.x = -swing * 0.75;
+      // Leg swing cycles (opposite phases: Left = phase, Right = phase + PI)
+      const legSwingAmplitude = 0.75;
+      const leftHipAngle = Math.sin(phase) * legSwingAmplitude;
+      const rightHipAngle = Math.sin(phase + Math.PI) * legSwingAmplitude;
 
-      // Arms swing opposite to legs
-      this.leftArmGroup.rotation.x = -swing * 0.75;
-      this.rightArmGroup.rotation.x = swing * 0.75;
+      this.leftHip.rotation.x = leftHipAngle;
+      this.rightHip.rotation.x = rightHipAngle;
 
-      // Subtle vertical bobbing
-      const bob = Math.abs(Math.sin(this.runAnimTime * 2)) * 0.12;
-      this.torsoGroup.position.y = 1.05 + bob;
-      this.headGroup.position.y = 0.65 + bob * 0.5;
+      // Real Human Knee Flexion:
+      // When the thigh swings backward into recovery/swing phase, the knee bends sharply
+      // backwards (up to 75 deg / 1.3 rad) to pull the heel under the glutes, then extends forward!
+      const leftKneeBend = Math.max(0, -Math.sin(phase)) * 1.30 + 0.12;
+      const rightKneeBend = Math.max(0, -Math.sin(phase + Math.PI)) * 1.30 + 0.12;
+
+      this.leftKnee.rotation.x = leftKneeBend;
+      this.rightKnee.rotation.x = rightKneeBend;
+
+      // Ankle plantar/dorsiflexion for foot-strike realism
+      this.leftFoot.rotation.x = -Math.sin(phase) * 0.25;
+      this.rightFoot.rotation.x = -Math.sin(phase + Math.PI) * 0.25;
+
+      // Dynamic Arm Swing: Arms pump from the shoulder opposite to the legs
+      const armSwingAmplitude = 0.70;
+      this.leftShoulder.rotation.x = -Math.sin(phase) * armSwingAmplitude;
+      this.rightShoulder.rotation.x = -Math.sin(phase + Math.PI) * armSwingAmplitude;
+
+      // Natural variable elbow flexion during arm drive (tightens slightly at peak forward drive)
+      this.leftElbow.rotation.x = 1.45 + Math.sin(phase) * 0.25;
+      this.rightElbow.rotation.x = 1.45 + Math.sin(phase + Math.PI) * 0.25;
+
+      // Pelvis & Spine Dynamics:
+      // 1. Pelvis yaw rotation twisting slightly with hip drive
+      this.pelvisGroup.rotation.y = Math.sin(phase) * 0.08;
+
+      // 2. Torso counter-rotates to balance the pelvis yaw
+      this.torsoGroup.rotation.y = -Math.sin(phase) * 0.06;
+
+      // 3. Athletic forward sprint lean (~8.5 degrees)
+      this.torsoGroup.rotation.x = 0.15;
+
+      // 4. Natural double-bounce vertical bobbing (crests at mid-support, dips at contact)
+      const bobbing = Math.abs(Math.sin(phase)) * 0.09;
+      this.pelvisGroup.position.y = 1.02 + bobbing;
+
+      // 5. Subtle head stability (compensates slightly for torso bob)
+      this.headGroup.rotation.x = -0.08 - bobbing * 0.5;
+
     } else if (this.isJumping) {
-      // Airborne pose: arms raised slightly, knees bent
-      this.leftLegGroup.rotation.x = 0.3;
-      this.rightLegGroup.rotation.x = -0.2;
-      this.leftArmGroup.rotation.x = -0.8;
-      this.rightArmGroup.rotation.x = -0.8;
-      this.torsoGroup.position.y = 1.05;
+      // Airborne athletic hurdle/jump pose:
+      // Knees tucked forward, arms raised outward for aerodynamic balance
+      this.pelvisGroup.position.y = 1.02;
+      this.torsoGroup.rotation.x = 0.20;
+      this.leftHip.rotation.x = -0.55;
+      this.rightHip.rotation.x = 0.35;
+      this.leftKnee.rotation.x = 0.85;
+      this.rightKnee.rotation.x = 1.10;
+
+      this.leftShoulder.rotation.x = -0.95;
+      this.rightShoulder.rotation.x = -0.80;
+      this.leftElbow.rotation.x = 0.90;
+      this.rightElbow.rotation.x = 0.90;
     }
 
-    // 5. Update Shadow
+    // 5. Update Dynamic Soft Shadow
     if (this.shadowMesh) {
       this.shadowMesh.position.x = this.mesh.position.x;
       this.shadowMesh.position.z = this.mesh.position.z;
-      // Shrink and fade shadow when high up
+      // Shrink and soften shadow with altitude
       const altitude = this.mesh.position.y;
-      const shadowScale = Math.max(0.3, 1.0 - altitude * 0.2);
+      const shadowScale = Math.max(0.35, 1.0 - altitude * 0.22);
       this.shadowMesh.scale.set(shadowScale, shadowScale, shadowScale);
-      this.shadowMesh.material.opacity = Math.max(0.12, 0.45 - altitude * 0.1);
+      this.shadowMesh.material.opacity = Math.max(0.10, 0.40 - altitude * 0.12);
     }
 
-    // 6. Update Bounding Box for Collision
+    // 6. Update Bounding Box for Precise Collision Detection
     this.updateBoundingBox();
   }
 
   updateBoundingBox() {
     const center = this.mesh.position.clone();
     if (this.isSliding) {
-      // Reduced vertical profile for sliding under obstacles
+      // Low profile volume for sliding safely under overhead hazard beams
       center.y += 0.45;
       this.box.setFromCenterAndSize(center, this.slideBoxSize);
     } else {
+      // Full upright human runner bounding volume
       center.y += 1.05;
       this.box.setFromCenterAndSize(center, this.normalBoxSize);
     }
@@ -372,9 +686,12 @@ export class Player {
 
   triggerCrash() {
     this.isDead = true;
-    // Dramatic crash ragdoll tilt
-    this.torsoGroup.rotation.x = 0.9;
-    this.torsoGroup.rotation.z = 0.6;
-    this.mesh.position.y = 0.2;
+    // Dramatic ragdoll tumble on collision
+    this.pelvisGroup.rotation.x = 1.1;
+    this.pelvisGroup.rotation.z = 0.7;
+    this.torsoGroup.rotation.y = 0.5;
+    this.leftHip.rotation.x = -0.9;
+    this.rightHip.rotation.x = 0.8;
+    this.mesh.position.y = 0.15;
   }
 }
