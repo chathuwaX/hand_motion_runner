@@ -1,7 +1,10 @@
 /**
  * SceneManager.js
  * Manages Three.js scene, camera, lighting, renderer, and viewport resizing.
- * Vibrant Daytime Sunny Light Theme for maximum obstacle & player contrast.
+ * Designed for dynamic split-screen layouts:
+ * - Adapts dynamically to container clientWidth / clientHeight with ResizeObserver
+ * - Dynamic 3rd person runner camera with smooth lateral and vertical tracking
+ * - Vibrant sunny daylight lighting with soft shadows
  */
 
 import * as THREE from 'three';
@@ -20,6 +23,8 @@ export class SceneManager {
     this.hemiLight = null;
     this.ambientLight = null;
 
+    this.resizeObserver = null;
+
     this.init();
   }
 
@@ -30,19 +35,21 @@ export class SceneManager {
     // Soft sunny atmospheric horizon haze
     this.scene.fog = new THREE.Fog(0x99ccf5, 75, 340);
 
-    // 2. Camera
-    const aspect = window.innerWidth / window.innerHeight;
-    this.camera = new THREE.PerspectiveCamera(65, aspect, 0.1, 500);
-    // Position camera in 3rd person runner view
-    this.camera.position.set(0, 4.2, 7.0);
-    this.camera.lookAt(0, 1.6, -10.0);
+    // 2. Camera: Sized to container dimensions
+    const width = (this.container && this.container.clientWidth) ? this.container.clientWidth : window.innerWidth;
+    const height = (this.container && this.container.clientHeight) ? this.container.clientHeight : window.innerHeight;
+    const aspect = width / height;
 
-    // 3. Renderer
+    this.camera = new THREE.PerspectiveCamera(65, aspect, 0.1, 500);
+    this.camera.position.set(0, 3.8, 6.4);
+    this.camera.lookAt(0, 1.65, -18.0);
+
+    // 3. Renderer with high performance & PBR tone mapping
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
       powerPreference: 'high-performance'
     });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -54,8 +61,12 @@ export class SceneManager {
     // 4. Lighting setup
     this.setupLighting();
 
-    // 5. Window resize handling
+    // 5. Container ResizeObserver & Window resize handling
     window.addEventListener('resize', () => this.onWindowResize());
+    if (typeof ResizeObserver !== 'undefined' && this.container) {
+      this.resizeObserver = new ResizeObserver(() => this.onWindowResize());
+      this.resizeObserver.observe(this.container);
+    }
   }
 
   setupLighting() {
@@ -86,11 +97,43 @@ export class SceneManager {
     this.scene.add(this.dirLight.target);
   }
 
+  updateCamera(delta, playerPos, currentSpeed) {
+    if (!this.camera || !playerPos) return;
+
+    // Smooth lateral tracking
+    const targetCamX = playerPos.x * 0.45;
+    this.camera.position.x += (targetCamX - this.camera.position.x) * Math.min(1.0, 7.5 * delta);
+
+    // Smooth vertical cushioning
+    const targetCamY = 3.8 + playerPos.y * 0.32;
+    this.camera.position.y += (targetCamY - this.camera.position.y) * Math.min(1.0, 6.0 * delta);
+
+    // Look-ahead target towards incoming trains
+    const lookX = playerPos.x * 0.20;
+    const lookY = 1.65 + playerPos.y * 0.25;
+    const lookZ = -18.0;
+    this.camera.lookAt(lookX, lookY, lookZ);
+
+    if (this.dirLight && this.dirLight.target) {
+      this.dirLight.position.x = 25 + playerPos.x * 0.4;
+      this.dirLight.target.position.set(playerPos.x, 0, -10);
+    }
+  }
+
+  resetCamera() {
+    if (!this.camera) return;
+    this.camera.position.set(0, 3.8, 6.4);
+    this.camera.lookAt(0, 1.65, -18.0);
+    this.onWindowResize();
+  }
+
   onWindowResize() {
     if (!this.camera || !this.renderer) return;
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    const width = (this.container && this.container.clientWidth) ? this.container.clientWidth : window.innerWidth;
+    const height = (this.container && this.container.clientHeight) ? this.container.clientHeight : window.innerHeight;
+    this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   }
 
@@ -102,6 +145,9 @@ export class SceneManager {
 
   dispose() {
     window.removeEventListener('resize', () => this.onWindowResize());
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
     if (this.renderer && this.renderer.domElement) {
       this.renderer.domElement.remove();
     }

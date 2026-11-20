@@ -1,6 +1,9 @@
 /**
  * main.js
  * Application entry point for MOTION RUNNER.
+ * Initializes split-screen dual viewports:
+ * - 3D Endless Runner Game Viewport
+ * - Live Human Motion Tracking Viewport
  */
 
 import { Game } from './game/Game.js';
@@ -8,6 +11,8 @@ import { Game } from './game/Game.js';
 window.addEventListener('DOMContentLoaded', () => {
   const canvasContainer = document.getElementById('game-canvas-container');
   const uiContainer = document.getElementById('ui-layer');
+  const trackingContainer = document.getElementById('tracking-panel');
+  const hudContainer = document.getElementById('game-hud-mount');
 
   if (!canvasContainer || !uiContainer) {
     console.error('Root containers not found.');
@@ -15,7 +20,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   try {
-    const game = new Game(canvasContainer, uiContainer);
+    const game = new Game(canvasContainer, uiContainer, trackingContainer, hudContainer);
     window.__MOTION_RUNNER__ = game; // Expose for testing & inspection
   } catch (err) {
     console.error('Fatal initialization error:', err);

@@ -8,11 +8,24 @@
   <link rel="stylesheet" href="/src/styles/style.css">
 </head>
 <body>
-  <div id="app-container">
-    <!-- 3D Three.js WebGL Canvas Mount -->
-    <div id="game-canvas-container"></div>
+  <!-- Split Screen 2-Part Container -->
+  <div id="app-container" class="split-view">
+    <!-- Part 1: 3D Endless Runner Game Screen -->
+    <div id="game-panel" class="split-pane game-pane">
+      <div id="game-canvas-container"></div>
+      <div id="game-hud-mount"></div>
+    </div>
 
-    <!-- UI Overlay Layer -->
+    <!-- Center Neon Divider Bar -->
+    <div id="split-divider" class="split-divider">
+      <div class="divider-line"></div>
+      <button id="btn-split-swap" class="divider-swap-btn" title="Swap Game and Tracking Sides">⇄</button>
+    </div>
+
+    <!-- Part 2: Human Motion Tracking Screen -->
+    <div id="tracking-panel" class="split-pane tracking-pane"></div>
+
+    <!-- Global Fullscreen Modal UI Layer (Menu, Calibration, Pause, Game Over) -->
     <div id="ui-layer"></div>
   </div>
 

@@ -1,8 +1,11 @@
 /**
  * Game.js
  * Master game coordinator.
- * Orchestrates 3D rendering, physics, procedural environment,
- * real-time camera hand tracking, audio synthesis, and UI screens.
+ * Orchestrates:
+ * - 3D Three.js rendering with photorealistic human runner and subway tracks
+ * - Dual split-screen architecture (Game Viewport on one side, Human Tracking Station on the other)
+ * - Real-time camera hand tracking, MediaPipe HandLandmarker, and GestureController
+ * - Audio synthesis, obstacle pooling, and interactive UI screens
  */
 
 import { SceneManager } from './SceneManager.js';
@@ -31,11 +34,14 @@ import { CalibrationScreen } from '../ui/CalibrationScreen.js';
 import { GameHUD } from '../ui/GameHUD.js';
 import { GameOver } from '../ui/GameOver.js';
 import { Settings } from '../ui/Settings.js';
+import { TrackingPanel } from '../ui/TrackingPanel.js';
 
 export class Game {
-  constructor(canvasContainer, uiContainer) {
+  constructor(canvasContainer, uiContainer, trackingContainer, hudContainer) {
     this.canvasContainer = canvasContainer;
     this.uiContainer = uiContainer;
+    this.trackingContainer = trackingContainer || document.getElementById('tracking-panel');
+    this.hudContainer = hudContainer || document.getElementById('game-hud-mount') || uiContainer;
 
     // Subsystems
     this.sceneManager = null;
@@ -66,6 +72,7 @@ export class Game {
     this.gameHUD = null;
     this.gameOver = null;
     this.settings = null;
+    this.trackingPanel = null;
 
     // Vision processing loop
     this.visionRafId = null;
@@ -75,7 +82,7 @@ export class Game {
   }
 
   async init() {
-    console.log('[Game] Initializing 3D Motion Runner...');
+    console.log('[Game] Initializing 3D Motion Runner (Split-Screen Architecture)...');
 
     // 1. Initialize 3D Engine
     this.sceneManager = new SceneManager(this.canvasContainer);
@@ -109,7 +116,7 @@ export class Game {
     this.inputManager.onActionCallback = (action, details) => this.handleAction(action, details);
     this.inputManager.onPauseCallback = () => this.togglePause();
 
-    // 4. Initialize UI
+    // 4. Initialize UI & Tracking Panel
     this.initUI();
 
     // 5. Setup Game Loop
@@ -128,13 +135,37 @@ export class Game {
     // Preload available camera devices
     this.cameraManager.getAvailableCameras().then(cams => {
       if (this.settings) this.settings.updateCameraList(cams);
+      if (this.trackingPanel) this.trackingPanel.updateCameraList(cams);
     });
 
-    console.log('[Game] Initialization complete.');
+    console.log('[Game] Split-screen initialization complete.');
   }
 
   initUI() {
-    // Main Menu
+    // 1. Dedicated Human Motion Tracking Panel (Right / Split Side)
+    if (this.trackingContainer) {
+      this.trackingPanel = new TrackingPanel(this.trackingContainer, {
+        onSwapSides: () => this.toggleSwapSides(),
+        onRecalibrate: () => this.startHandControlFlow(true),
+        onSensitivityChange: (factorName) => {
+          const factor = factorName === 'high' ? 1.4 : (factorName === 'low' ? 0.7 : 1.0);
+          this.movementTracker.setSensitivity(factor);
+          this.gestureRecognizer.setSensitivity(factor);
+        },
+        onCameraChange: async (deviceId) => {
+          const videoEl = this.trackingPanel.getVideoElement();
+          await this.cameraManager.startCamera(videoEl, deviceId);
+        }
+      });
+    }
+
+    // 2. Center Divider Swap Sides Button
+    const btnCenterSwap = document.getElementById('btn-split-swap');
+    if (btnCenterSwap) {
+      btnCenterSwap.addEventListener('click', () => this.toggleSwapSides());
+    }
+
+    // 3. Main Menu Modal
     this.mainMenu = new MainMenu(this.uiContainer, {
       onPlayHand: () => this.startHandControlFlow(),
       onPlayKeyboard: () => this.startKeyboardRun(),
@@ -142,7 +173,7 @@ export class Game {
     });
     this.mainMenu.updateHighScore(this.scoreManager.highScore);
 
-    // Calibration Screen
+    // 4. Calibration Screen Modal
     this.calibrationScreen = new CalibrationScreen(this.uiContainer, {
       onCancel: () => this.cancelCalibration(),
       onRecalibrate: () => this.calibration.startCalibration(),
@@ -153,36 +184,36 @@ export class Game {
       }
     });
 
-    // Calibration progress callback
     this.calibration.onProgressCallback = (data) => {
       this.calibrationScreen.updateProgress(data.progress, data.status);
     };
 
-    // Calibration complete callback
     this.calibration.onCompleteCallback = (neutral) => {
       this.audioManager.playGestureCue();
     };
 
-    // Game HUD
-    this.gameHUD = new GameHUD(this.uiContainer, {
+    // 5. Game HUD (Mounted over the Game Viewport)
+    this.gameHUD = new GameHUD(this.hudContainer, {
       onPause: () => this.togglePause(),
       onResume: () => this.resumeRun(),
       onRestart: () => this.restartRun(),
       onQuit: () => this.quitToMainMenu()
     });
+    // In split-screen mode, the dedicated TrackingPanel handles full video and skeleton rendering
+    this.gameHUD.setPipVisible(false);
 
-    // Game Over
+    // 6. Game Over Modal
     this.gameOver = new GameOver(this.uiContainer, {
       onRestart: () => this.restartRun(),
-      onRecalibrate: () => this.startHandControlFlow(),
+      onRecalibrate: () => this.startHandControlFlow(true),
       onMainMenu: () => this.quitToMainMenu()
     });
 
-    // Settings
+    // 7. Settings Modal
     this.settings = new Settings(this.uiContainer, this.audioManager, {
       onCameraSelect: async (deviceId) => {
-        if (this.cameraManager.isStreaming) {
-          const videoEl = this.calibrationScreen.getCameraPreview().getVideoElement();
+        if (this.cameraManager.isStreaming && this.trackingPanel) {
+          const videoEl = this.trackingPanel.getVideoElement();
           await this.cameraManager.startCamera(videoEl, deviceId);
         }
       },
@@ -193,28 +224,47 @@ export class Game {
     });
   }
 
+  toggleSwapSides() {
+    const app = document.getElementById('app-container');
+    if (app) {
+      app.classList.toggle('layout-swapped');
+    }
+    // Resize Three.js viewport immediately
+    if (this.sceneManager) {
+      setTimeout(() => this.sceneManager.onWindowResize(), 50);
+    }
+  }
+
   // --- Game Flow Transitions ---
 
-  async startHandControlFlow() {
+  async startHandControlFlow(forceCalibration = false) {
     this.inputManager.setMode(ControlMode.HAND);
     this.mainMenu.hide();
-    this.calibrationScreen.hide();
-    this.gameHUD.setPipVisible(true);
+    this.gameOver.hide();
 
     try {
-      this.startRun();
+      // 1. Hook camera directly to the dedicated Tracking Panel video element
+      const trackingVideo = this.trackingPanel ? this.trackingPanel.getVideoElement() : null;
+      if (trackingVideo) {
+        await this.cameraManager.startCamera(trackingVideo);
+      }
 
-      // 1. Start camera directly onto the HUD PIP preview video
-      const videoEl = this.gameHUD.getCameraPreview().getVideoElement();
-      await this.cameraManager.startCamera(videoEl);
-
-      // 2. Initialize MediaPipe if not loaded
+      // 2. Initialize MediaPipe HandLandmarker if needed
       if (!this.handTracker.isLoaded) {
         await this.handTracker.init();
       }
 
-      // Start real-time vision pump
+      // Start continuous vision tracking loop
       this.startVisionLoop();
+
+      if (forceCalibration) {
+        // Open calibration modal
+        this.calibrationScreen.show();
+        this.calibration.startCalibration();
+      } else {
+        // Launch directly into split-screen game
+        this.startRun();
+      }
     } catch (err) {
       console.error('[Game] Hand tracking initialization failed:', err);
       alert('Could not access webcam for hand tracking: ' + err.message + '\nSwitching to Keyboard mode.');
@@ -226,24 +276,18 @@ export class Game {
     this.inputManager.setMode(ControlMode.KEYBOARD);
     this.mainMenu.hide();
     this.calibrationScreen.hide();
-    this.gameHUD.setPipVisible(false);
-
-    // Stop camera if running
-    this.cameraManager.stopCamera();
-    this.stopVisionLoop();
 
     this.startRun();
   }
 
   launchRunFromCalibration() {
     this.calibrationScreen.hide();
-    this.gameHUD.setPipVisible(true);
 
-    // Reattach camera stream to HUD PIP preview
-    const pipVideo = this.gameHUD.getCameraPreview().getVideoElement();
-    if (this.cameraManager.stream && pipVideo) {
-      pipVideo.srcObject = this.cameraManager.stream;
-      pipVideo.play();
+    // Reattach camera stream to Tracking Panel video element
+    const trackingVideo = this.trackingPanel ? this.trackingPanel.getVideoElement() : null;
+    if (this.cameraManager.stream && trackingVideo) {
+      trackingVideo.srcObject = this.cameraManager.stream;
+      trackingVideo.play().catch(() => {});
     }
 
     this.startRun();
@@ -263,8 +307,7 @@ export class Game {
 
     // Reset systems
     this.player.reset();
-    this.sceneManager.camera.position.set(0, 4.2, 7.0);
-    this.sceneManager.camera.lookAt(0, 1.6, -10.0);
+    this.sceneManager.resetCamera();
     this.environment.reset();
     this.obstacleManager.reset();
     this.coinManager.reset();
@@ -279,10 +322,10 @@ export class Game {
 
     if (this.inputManager.getMode() === ControlMode.HAND) {
       this.startVisionLoop();
-      const pipVideo = this.gameHUD.getCameraPreview().getVideoElement();
-      if (this.cameraManager.stream && pipVideo) {
-        pipVideo.srcObject = this.cameraManager.stream;
-        pipVideo.play().catch(() => {});
+      const trackingVideo = this.trackingPanel ? this.trackingPanel.getVideoElement() : null;
+      if (this.cameraManager.stream && trackingVideo) {
+        trackingVideo.srcObject = this.cameraManager.stream;
+        trackingVideo.play().catch(() => {});
       }
     }
 
@@ -318,7 +361,6 @@ export class Game {
     this.mainMenu.updateHighScore(this.scoreManager.highScore);
     this.mainMenu.show();
 
-    // Clean up camera when leaving hand mode
     this.cameraManager.stopCamera();
     this.stopVisionLoop();
 
@@ -332,7 +374,6 @@ export class Game {
 
     this.player.triggerCrash();
 
-    // Check high score
     const isRecord = this.scoreManager.saveHighScore();
     const stats = this.scoreManager.getStats();
 
@@ -382,7 +423,7 @@ export class Game {
     }
   }
 
-  // --- Vision Loop ---
+  // --- Real-Time Vision Loop ---
 
   startVisionLoop() {
     if (this.visionRafId) return;
@@ -405,21 +446,27 @@ export class Game {
   processVisionFrame(timestamp) {
     if (!this.cameraManager.isStreaming || !this.handTracker.isLoaded) return;
 
-    // Detect using active playing video element
-    const activeVideo = this.cameraManager.getActiveVideo() || this.gameHUD.getCameraPreview().getVideoElement();
+    const activeVideo = (this.trackingPanel && this.trackingPanel.getVideoElement()) ||
+      this.cameraManager.getActiveVideo() ||
+      this.gameHUD.getCameraPreview().getVideoElement();
+
     if (!activeVideo || activeVideo.readyState < 2) return;
 
     const detection = this.handTracker.detect(activeVideo, timestamp);
     this.lastDetection = detection;
 
     const isPlaying = gameStateManager.is(GameStates.PLAYING);
+    const ctrlState = this.gestureController.getState();
+    const currentLane = this.player ? this.player.targetLane : 0;
 
+    // 1. Update Tracking Panel Viewport & Telemetry
+    if (this.trackingPanel) {
+      this.trackingPanel.render(detection, ctrlState, currentLane);
+    }
+
+    // 2. Process Hand Gestures into Game Actions
     if (isPlaying && this.inputManager.getMode() === ControlMode.HAND) {
       this.gestureController.process(detection, timestamp);
-      const preview = this.gameHUD.getCameraPreview();
-      preview.render(detection, true);
-
-      // Update HUD status pill
       this.gameHUD.updateTrackingStatus(this.gestureController.getState(), false);
     }
   }
@@ -429,7 +476,7 @@ export class Game {
   update(delta) {
     const isPlaying = gameStateManager.is(GameStates.PLAYING);
 
-    // In menu or playing, environment scrolls smoothly
+    // Environment scrolls in menu and during gameplay
     const speed = isPlaying ? this.difficultyManager.getSpeed() : 10.0;
     this.environment.update(delta, speed);
 
@@ -446,11 +493,8 @@ export class Game {
       // Update Player
       this.player.update(delta, currentSpeed);
 
-      // Dynamic 3rd person camera follow
-      const targetCamX = this.player.mesh.position.x * 0.45;
-      const camDiff = targetCamX - this.sceneManager.camera.position.x;
-      this.sceneManager.camera.position.x += camDiff * Math.min(1.0, 10.0 * delta);
-      this.sceneManager.camera.lookAt(this.player.mesh.position.x * 0.2, 1.6, -10.0);
+      // Dynamic 3rd person cinematic camera follow
+      this.sceneManager.updateCamera(delta, this.player.mesh.position, currentSpeed);
 
       // Update Obstacles & Coins
       this.obstacleManager.update(delta, currentSpeed, difficultyTier, minSpacing);
@@ -474,7 +518,7 @@ export class Game {
       // Update Score
       this.scoreManager.update(delta, currentSpeed);
 
-      // Update HUD
+      // Update HUD Stats
       this.gameHUD.updateStats(this.scoreManager.getStats(), currentSpeed);
     } else {
       // Idle player animation in menu
