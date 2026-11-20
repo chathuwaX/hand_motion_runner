@@ -284,29 +284,30 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px;
-  max-width: 580px;
-  width: 90%;
+  gap: 18px;
+  max-width: 440px;
+  width: 92%;
   text-align: center;
+  padding: 12px;
 }
 
 .cyber-badge {
   display: inline-block;
-  padding: 6px 14px;
+  padding: 5px 12px;
   background: rgba(0, 240, 255, 0.12);
   border: 1px solid var(--cyan-primary);
   border-radius: 20px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   letter-spacing: 2px;
   color: var(--cyan-primary);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .game-title {
-  font-size: 3.8rem;
+  font-size: clamp(2.2rem, 3.6vw, 3.2rem);
   font-weight: 900;
-  letter-spacing: 3px;
-  line-height: 1;
+  letter-spacing: 2.5px;
+  line-height: 1.05;
   text-shadow: 0 0 25px var(--cyan-glow);
 }
 
@@ -322,20 +323,20 @@ html, body {
 
 .game-tagline {
   color: var(--text-dim);
-  font-size: 1.05rem;
-  margin-top: 8px;
+  font-size: 0.92rem;
+  margin-top: 6px;
 }
 
 .menu-action-card {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   width: 100%;
 }
 
 .menu-action-card .btn {
   width: 100%;
-  padding: 18px 24px;
+  padding: 14px 20px;
 }
 
 .btn-icon {
@@ -927,6 +928,11 @@ html, body {
 /* ==========================================================================
    HUMAN MOTION TRACKING SPLIT PANEL STYLES
    ========================================================================== */
+/* ==========================================================================
+   HUMAN MOTION TRACKING LIVE CAPTURE CAMERA INTERFACE
+   Dedicated Full-Height Motion-Capture Studio & Viewfinder Interface
+   ========================================================================== */
+
 .tracking-pane::-webkit-scrollbar {
   width: 6px;
 }
@@ -944,256 +950,414 @@ html, body {
   background: var(--cyan-primary);
 }
 
-.tracking-panel-inner {
+/* Master Container */
+.camera-interface-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 20px;
   width: 100%;
-  min-height: 100%;
-}
-
-/* Top Tracking Bar */
-.tracking-top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.tracking-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 16px;
-  background: rgba(16, 23, 38, 0.85);
-  border: 1px solid var(--bg-card-border);
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 1px;
-}
-
-.tracking-status-badge.badge-active {
-  border-color: #00ff88;
-  color: #00ff88;
-  box-shadow: 0 0 12px rgba(0, 255, 136, 0.3);
-}
-
-.tracking-status-badge.badge-rearm {
-  border-color: #ffd700;
-  color: #ffd700;
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
-}
-
-.tracking-status-badge.badge-lost {
-  border-color: #ff0055;
-  color: #ff0055;
-  box-shadow: 0 0 12px rgba(255, 0, 85, 0.3);
-}
-
-.tracking-pulse-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-  box-shadow: 0 0 8px currentColor;
-  animation: pulse-dot 1.2s infinite;
-}
-
-.tracking-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.tp-btn-tool {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 10px;
-  color: var(--text-white);
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.tp-btn-tool:hover {
-  background: rgba(0, 240, 255, 0.2);
-  border-color: var(--cyan-primary);
-  color: var(--cyan-primary);
-  transform: translateY(-1px);
-}
-
-/* Feed Viewport Card */
-.tracking-feed-card {
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-card);
-  border: 1px solid var(--bg-card-border);
-  border-radius: 16px;
+  height: 100%;
   overflow: hidden;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  position: relative;
+  background: #070a13;
 }
 
-.feed-header-strip {
+/* 1. Header Toolbar */
+.cam-interface-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  background: rgba(0, 0, 0, 0.35);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 0.75rem;
+  background: rgba(13, 21, 39, 0.95);
+  border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+  z-index: 10;
+  flex-shrink: 0;
+  backdrop-filter: blur(10px);
+}
+
+.cam-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(7, 10, 18, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #fff;
+  transition: all 0.2s ease;
+}
+
+.cam-status-pill.status-active {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.35);
+}
+
+.cam-status-pill.status-rearm {
+  border-color: #ffd700;
+  color: #ffd700;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.35);
+}
+
+.cam-status-pill.status-lost {
+  border-color: #ff0055;
+  color: #ff0055;
+  box-shadow: 0 0 12px rgba(255, 0, 85, 0.35);
+}
+
+.cam-rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff0055;
+  box-shadow: 0 0 8px #ff0055;
+  animation: cam-pulse 1.2s infinite;
+}
+
+.cam-rec-dot.live {
+  background: #00ff88;
+  box-shadow: 0 0 8px #00ff88;
+}
+
+@keyframes cam-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.cam-status-title {
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 1.5px;
 }
 
-.feed-title {
-  color: var(--cyan-primary);
-}
-
-.feed-fps {
+.cam-fps-badge {
+  font-size: 0.68rem;
   color: #00ff88;
+  font-weight: 800;
+  background: rgba(0, 255, 136, 0.12);
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 255, 136, 0.25);
 }
 
-.tracking-feed-viewport {
+.cam-header-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cam-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cam-tool-btn:hover {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: var(--cyan-primary);
+  color: var(--cyan-primary);
+  box-shadow: 0 0 12px var(--cyan-glow);
+  transform: translateY(-1px);
+}
+
+/* 2. Live Capture Viewport (Edge-to-Edge live camera viewfinder) */
+.cam-live-viewport {
+  flex: 1;
+  min-height: 280px;
   position: relative;
-  width: 100%;
-  height: 330px;
   background: #000;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.tracking-video {
+.cam-video {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scaleX(-1);
+  transform: scaleX(-1); /* Mirror camera for natural intuitive motion */
+  z-index: 1;
 }
 
-.tracking-canvas {
+.cam-canvas {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+  z-index: 2;
   pointer-events: none;
 }
 
-/* Lane Zone Tags */
-.lane-zone-tag {
+/* Cyber Viewfinder Corner Brackets */
+.cam-bracket {
   position: absolute;
-  top: 12px;
-  padding: 4px 12px;
-  background: rgba(11, 17, 30, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.bracket-tl {
+  top: 14px;
+  left: 14px;
+  border-top: 3px solid var(--cyan-primary);
+  border-left: 3px solid var(--cyan-primary);
+}
+
+.bracket-tr {
+  top: 14px;
+  right: 14px;
+  border-top: 3px solid var(--cyan-primary);
+  border-right: 3px solid var(--cyan-primary);
+}
+
+.bracket-bl {
+  bottom: 14px;
+  left: 14px;
+  border-bottom: 3px solid var(--cyan-primary);
+  border-left: 3px solid var(--cyan-primary);
+}
+
+.bracket-br {
+  bottom: 14px;
+  right: 14px;
+  border-bottom: 3px solid var(--cyan-primary);
+  border-right: 3px solid var(--cyan-primary);
+}
+
+/* Lane Zone Banners */
+.cam-zone-banner {
+  position: absolute;
+  top: 14px;
+  z-index: 3;
+  padding: 6px 12px;
+  background: rgba(7, 10, 18, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 1px;
   color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   pointer-events: none;
-  transition: all 0.15s ease;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.tag-left { left: 6%; }
-.tag-center { left: 50%; transform: translateX(-50%); }
-.tag-right { right: 6%; }
+.cam-zone-banner small {
+  font-size: 0.6rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
 
-.lane-zone-tag.active {
-  background: rgba(0, 240, 255, 0.3);
+.banner-left { left: 8%; }
+.banner-center { left: 50%; transform: translateX(-50%); }
+.banner-right { right: 8%; }
+
+.cam-zone-banner.active {
+  background: rgba(0, 240, 255, 0.32);
   border-color: var(--cyan-primary);
   color: #fff;
-  box-shadow: 0 0 15px var(--cyan-glow);
+  box-shadow: 0 0 18px var(--cyan-glow);
   transform: scale(1.1);
 }
 
-.tag-center.active {
+.banner-center.active {
   transform: translateX(-50%) scale(1.1);
 }
 
-/* Vertical Zone Lines */
-.vert-zone-line {
+/* Threshold Tags (Jump / Slide horizontal markers) */
+.cam-threshold-tag {
   position: absolute;
   left: 0;
   right: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 2px 14px;
+  z-index: 3;
+  padding: 3px 16px;
   font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 1px;
   pointer-events: none;
-  transition: all 0.15s;
+  display: flex;
+  justify-content: flex-end;
+  transition: all 0.18s ease;
 }
 
-.line-jump {
+.tag-jump {
   top: 35%;
   transform: translateY(-100%);
   color: #ffd700;
+  border-bottom: 1px dashed rgba(255, 215, 0, 0.4);
 }
 
-.line-slide {
+.tag-slide {
   top: 65%;
   color: #ff6b00;
+  border-top: 1px dashed rgba(255, 107, 0, 0.4);
 }
 
-.vert-zone-line.active {
-  background: rgba(255, 215, 0, 0.2);
+.tag-jump.active {
+  background: rgba(255, 215, 0, 0.22);
   color: #fff;
-  box-shadow: 0 0 16px rgba(255, 215, 0, 0.4);
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.5);
 }
 
-.line-slide.active {
+.tag-slide.active {
   background: rgba(255, 107, 0, 0.25);
+  color: #fff;
   box-shadow: 0 0 16px rgba(255, 107, 0, 0.5);
 }
 
-/* Telemetry Section */
-.tracking-telemetry-container {
+/* Floating Action Flash Badge */
+.cam-action-flash {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 22px;
+  background: rgba(7, 10, 18, 0.9);
+  border: 2px solid var(--cyan-primary);
+  border-radius: 30px;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  box-shadow: 0 0 24px var(--cyan-glow);
+  pointer-events: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cam-action-flash.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(20px) scale(0.9);
+  pointer-events: none;
+}
+
+.cam-action-flash.flash-jump {
+  border-color: #ffd700;
+  color: #ffd700;
+  box-shadow: 0 0 24px rgba(255, 215, 0, 0.6);
+}
+
+.cam-action-flash.flash-slide {
+  border-color: #ff6b00;
+  color: #ff6b00;
+  box-shadow: 0 0 24px rgba(255, 107, 0, 0.6);
+}
+
+.cam-action-flash.flash-left {
+  border-color: var(--magenta-accent);
+  color: var(--magenta-accent);
+  box-shadow: 0 0 24px var(--magenta-glow);
+}
+
+.cam-action-flash.flash-right {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 24px rgba(0, 255, 136, 0.6);
+}
+
+/* Standby / Activation Overlay */
+.cam-standby-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: radial-gradient(circle at center, rgba(13, 21, 39, 0.92) 0%, rgba(7, 10, 18, 0.98) 100%);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.standby-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  max-width: 420px;
+  padding: 32px 28px;
+}
+
+.standby-icon {
+  font-size: 2.8rem;
+  filter: drop-shadow(0 0 14px var(--cyan-glow));
+}
+
+.standby-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--cyan-primary);
+}
+
+.standby-desc {
+  font-size: 0.88rem;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+.standby-hint {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.standby-hint span {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* 3. Bottom Telemetry & Steering Control Drawer */
+.cam-telemetry-drawer {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.telemetry-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   padding: 14px 18px;
-  background: var(--bg-card);
-  border: 1px solid var(--bg-card-border);
-  border-radius: 14px;
+  background: rgba(13, 21, 39, 0.95);
+  border-top: 1px solid rgba(0, 240, 255, 0.2);
+  z-index: 4;
+  flex-shrink: 0;
+  backdrop-filter: blur(10px);
 }
 
-.card-caption {
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  color: var(--text-dim);
-}
-
-/* Lane Blocks */
-.lane-indicator-strip {
+/* Interactive 3-Lane Selector Strip */
+.cam-lane-strip {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
 }
 
-.lane-block {
+.cam-lane-tile {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 8px;
   padding: 10px 8px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1201,111 +1365,68 @@ html, body {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.lane-block .lane-arrow {
+.cam-lane-tile .tile-arrow {
   font-size: 1.1rem;
   color: var(--text-dim);
 }
 
-.lane-block .lane-name {
-  font-size: 0.85rem;
-  font-weight: 900;
+.cam-lane-tile .tile-text {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.cam-lane-tile .tile-text strong {
+  font-size: 0.78rem;
   letter-spacing: 1px;
 }
 
-.lane-block .lane-id {
-  font-size: 0.65rem;
-  font-weight: 700;
+.cam-lane-tile .tile-text small {
+  font-size: 0.62rem;
   color: var(--text-dim);
+  font-weight: 700;
 }
 
-.lane-block.active {
+.cam-lane-tile.active {
   background: rgba(0, 240, 255, 0.2);
   border-color: var(--cyan-primary);
-  box-shadow: 0 0 20px var(--cyan-glow);
+  box-shadow: 0 0 18px var(--cyan-glow);
   transform: translateY(-2px);
 }
 
-.lane-block.active .lane-arrow,
-.lane-block.active .lane-name,
-.lane-block.active .lane-id {
+.cam-lane-tile.active .tile-arrow,
+.cam-lane-tile.active .tile-text strong {
   color: var(--cyan-primary);
 }
 
-/* Action Display Pill */
-.action-display-pill {
-  display: flex;
-  align-items: center;
+/* Hand Position Metrics & Status Row */
+.cam-metrics-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 90px;
   gap: 12px;
-  padding: 12px 18px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  font-size: 1.05rem;
-  font-weight: 900;
-  letter-spacing: 1.5px;
-  transition: all 0.15s ease;
 }
 
-.action-display-pill.action-jump {
-  background: rgba(255, 215, 0, 0.2);
-  border-color: var(--gold-accent);
-  color: var(--gold-accent);
-  box-shadow: 0 0 18px var(--gold-glow);
-}
-
-.action-display-pill.action-slide {
-  background: rgba(255, 107, 0, 0.25);
-  border-color: #ff6b00;
-  color: #ff6b00;
-  box-shadow: 0 0 18px rgba(255, 107, 0, 0.4);
-}
-
-.action-display-pill.action-left {
-  background: rgba(255, 0, 85, 0.2);
-  border-color: var(--magenta-accent);
-  color: var(--magenta-accent);
-  box-shadow: 0 0 18px var(--magenta-glow);
-}
-
-.action-display-pill.action-right {
-  background: rgba(0, 255, 136, 0.2);
-  border-color: #00ff88;
-  color: #00ff88;
-  box-shadow: 0 0 18px rgba(0, 255, 136, 0.35);
-}
-
-.action-display-pill.action-run {
-  background: rgba(0, 240, 255, 0.15);
-  border-color: var(--cyan-primary);
-  color: var(--cyan-primary);
-}
-
-/* Coordinates & Metrics */
-.coords-meters-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.coord-meter-col {
+.metric-gauge {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.meter-label {
+.gauge-header {
   display: flex;
   justify-content: space-between;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 800;
+  letter-spacing: 0.5px;
   color: var(--text-dim);
 }
 
-.meter-label span:last-child {
+.gauge-header span:last-child {
   color: #fff;
+  font-weight: 900;
 }
 
-.meter-bar-track {
+.gauge-track {
   position: relative;
   width: 100%;
   height: 8px;
@@ -1314,95 +1435,89 @@ html, body {
   overflow: hidden;
 }
 
-.meter-bar-fill {
+.gauge-fill {
   height: 100%;
   background: var(--cyan-primary);
   border-radius: 4px;
   transition: width 0.08s linear;
 }
 
-.meter-fill-cyan { background: var(--cyan-primary); }
-.meter-fill-green { background: #00ff88; }
+.gauge-fill-cyan {
+  background: linear-gradient(90deg, #0088ff, #00f0ff);
+}
 
-.meter-center-marker {
+.gauge-fill-green {
+  background: #00ff88;
+}
+
+.gauge-notch {
   position: absolute;
   top: 0;
-  left: 50%;
   width: 2px;
   height: 100%;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+
+.notch-center {
+  left: 50%;
   transform: translateX(-50%);
 }
 
-/* Motion Guide Grid */
-.motion-guide-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+.notch-jump {
+  left: 35%;
 }
 
-.guide-item {
+.notch-slide {
+  left: 65%;
+}
+
+/* Quick Settings & Controls Strip */
+.cam-controls-strip {
   display: flex;
+  gap: 12px;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  font-size: 0.75rem;
-}
-
-.guide-icon {
-  font-size: 1.3rem;
-}
-
-.guide-info {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.25;
-}
-
-.guide-info strong {
-  color: #fff;
-  font-size: 0.75rem;
-}
-
-.guide-info span {
-  color: var(--text-dim);
-  font-size: 0.68rem;
-}
-
-/* Settings Strip */
-.tp-settings-row {
-  display: flex;
-  gap: 14px;
   flex-wrap: wrap;
 }
 
-.tp-setting-item {
-  flex: 1;
-  min-width: 130px;
+.ctrl-group {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 0.7rem;
-  font-weight: 800;
-  color: var(--text-dim);
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 140px;
 }
 
-.tp-select {
-  padding: 8px 10px;
+.ctrl-group label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.cam-select {
+  flex: 1;
+  padding: 6px 10px;
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
   color: #fff;
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 600;
   outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
 }
 
-.tp-select option {
-  background: #111827;
+.cam-select:hover,
+.cam-select:focus {
+  border-color: var(--cyan-primary);
+}
+
+.cam-select option {
+  background: #0b111e;
   color: #fff;
 }
 

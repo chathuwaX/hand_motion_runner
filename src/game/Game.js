@@ -146,6 +146,7 @@ export class Game {
     if (this.trackingContainer) {
       this.trackingPanel = new TrackingPanel(this.trackingContainer, {
         onSwapSides: () => this.toggleSwapSides(),
+        onStartCamera: () => this.startHandControlFlow(false),
         onRecalibrate: () => this.startHandControlFlow(true),
         onSensitivityChange: (factorName) => {
           const factor = factorName === 'high' ? 1.4 : (factorName === 'low' ? 0.7 : 1.0);
@@ -155,6 +156,7 @@ export class Game {
         onCameraChange: async (deviceId) => {
           const videoEl = this.trackingPanel.getVideoElement();
           await this.cameraManager.startCamera(videoEl, deviceId);
+          this.trackingPanel.startCameraFeed();
         }
       });
     }
@@ -165,8 +167,8 @@ export class Game {
       btnCenterSwap.addEventListener('click', () => this.toggleSwapSides());
     }
 
-    // 3. Main Menu Modal
-    this.mainMenu = new MainMenu(this.uiContainer, {
+    // 3. Main Menu (Mounted over the Game Viewport side)
+    this.mainMenu = new MainMenu(this.hudContainer, {
       onPlayHand: () => this.startHandControlFlow(),
       onPlayKeyboard: () => this.startKeyboardRun(),
       onOpenSettings: () => this.settings.show()
@@ -202,8 +204,8 @@ export class Game {
     // In split-screen mode, the dedicated TrackingPanel handles full video and skeleton rendering
     this.gameHUD.setPipVisible(false);
 
-    // 6. Game Over Modal
-    this.gameOver = new GameOver(this.uiContainer, {
+    // 6. Game Over Modal (Mounted over the Game Viewport side)
+    this.gameOver = new GameOver(this.hudContainer, {
       onRestart: () => this.restartRun(),
       onRecalibrate: () => this.startHandControlFlow(true),
       onMainMenu: () => this.quitToMainMenu()
@@ -247,6 +249,7 @@ export class Game {
       const trackingVideo = this.trackingPanel ? this.trackingPanel.getVideoElement() : null;
       if (trackingVideo) {
         await this.cameraManager.startCamera(trackingVideo);
+        this.trackingPanel.startCameraFeed();
       }
 
       // 2. Initialize MediaPipe HandLandmarker if needed

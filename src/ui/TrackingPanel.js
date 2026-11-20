@@ -1,28 +1,27 @@
 /**
  * TrackingPanel.js
- * Dedicated Split-Screen Human Motion Tracking Control Station.
- * Occupies one side of the split screen, providing:
- * - High-definition live mirrored webcam feed
- * - Real-time skeletal hand landmark rendering (21 joints, bones, palm reticle)
- * - Dynamic interactive lane steering zone overlays (Left, Center, Right)
- * - Real-time jump ($Y < 0.35$) and slide ($Y > 0.65$) threshold indicators
- * - Live telemetry dashboard: Active Lane, Detected Motion Action, Hand X/Y coordinates, and Confidence
- * - Interactive controls: Swap Sides, Fullscreen Toggle, Sensitivity adjustment, Camera selector, and Recalibrate
- * - Visual gesture instructions guide
+ * Dedicated Split-Screen Live Capture Hand Camera Interface.
+ * Forms the entire human motion tracking half of the screen with:
+ * - Edge-to-edge high-definition mirrored webcam live capture feed
+ * - Real-time skeletal hand landmark tracking (21 joints, bones, palm reticle)
+ * - Three vertical steering zone columns (Left, Center, Right) with live active glow
+ * - Horizontal Jump ($Y < 0.35$) and Slide ($Y > 0.65$) threshold indicators
+ * - Cyberpunk viewfinder HUD with crosshairs, corner brackets, and coordinate telemetry
+ * - Interactive Lane Indicator tiles (LEFT, CENTER, RIGHT)
+ * - Detected Gesture Action badge and confidence metrics
+ * - Live camera activation, camera switcher, sensitivity controls, and swap sides button
  */
 
 export class TrackingPanel {
   constructor(container, callbacks = {}) {
     this.container = container;
-    this.callbacks = callbacks; // onSwapSides, onToggleFullscreen, onSensitivityChange, onRecalibrate, onCameraChange
+    this.callbacks = callbacks; // onSwapSides, onRecalibrate, onSensitivityChange, onCameraChange, onStartCamera
 
     // State
-    this.currentLane = 0; // -1, 0, 1
+    this.currentLane = 0; // -1: Left, 0: Center, 1: Right
     this.currentAction = 'RUNNING';
     this.controllerState = 'IDLE';
-    this.isMirrored = true;
-    this.isSplitMode = true;
-    this.isSwapped = false; // false: Game on Left, Tracking on Right; true: reversed
+    this.isCameraActive = false;
 
     // Skeletal landmark connections (pairs of joint indices)
     this.CONNECTIONS = [
@@ -47,186 +46,164 @@ export class TrackingPanel {
 
   createElements() {
     this.wrapper = document.createElement('div');
-    this.wrapper.className = 'tracking-panel-inner';
+    this.wrapper.className = 'camera-interface-container';
 
     this.wrapper.innerHTML = `
-      <!-- Top Control & Status Bar -->
-      <div class="tracking-top-bar">
-        <div class="tracking-status-badge badge-active" id="tp-status-badge">
-          <span class="tracking-pulse-dot"></span>
-          <span id="tp-status-text">HUMAN TRACKING ACTIVE</span>
+      <!-- 1. Header Toolbar -->
+      <div class="cam-interface-header">
+        <div class="cam-status-pill" id="tp-status-badge">
+          <span class="cam-rec-dot" id="tp-rec-dot"></span>
+          <span class="cam-status-title" id="tp-status-text">HAND TRACKING CAMERA</span>
+          <span class="cam-fps-badge" id="tp-fps-badge">30 FPS</span>
         </div>
 
-        <div class="tracking-header-actions">
-          <button id="btn-tp-swap" class="tp-btn-tool" title="Swap Game & Tracking Sides">
+        <div class="cam-header-tools">
+          <button id="btn-tp-swap" class="cam-tool-btn" title="Swap Game & Camera Sides">
             <span>⇄ Swap Sides</span>
           </button>
-          <button id="btn-tp-recalib" class="tp-btn-tool" title="Recalibrate Neutral Hand Position">
+          <button id="btn-tp-recalib" class="cam-tool-btn" title="Recalibrate Hand Position">
             <span>🎯 Recalibrate</span>
           </button>
         </div>
       </div>
 
-      <!-- Live Video & Skeletal Vision Viewport Card -->
-      <div class="tracking-feed-card">
-        <div class="feed-header-strip">
-          <span class="feed-title">WEBCAM HAND SKELETON FEED</span>
-          <span class="feed-fps" id="tp-fps-counter">30 FPS</span>
+      <!-- 2. Live Capture Viewport (Dominates the screen) -->
+      <div class="cam-live-viewport" id="tp-feed-mount">
+        <!-- Live Mirrored Video Stream -->
+        <video id="tp-video" class="cam-video" autoplay playsinline muted></video>
+
+        <!-- Overlay Canvas for Hand Skeleton & Lane Boundaries -->
+        <canvas id="tp-canvas" class="cam-canvas"></canvas>
+
+        <!-- Cyber Viewfinder Corner Brackets -->
+        <div class="cam-bracket bracket-tl"></div>
+        <div class="cam-bracket bracket-tr"></div>
+        <div class="cam-bracket bracket-bl"></div>
+        <div class="cam-bracket bracket-br"></div>
+
+        <!-- Lane Steering Zone Headers -->
+        <div class="cam-zone-banner banner-left" id="zone-banner-left">
+          <span>◀ LEFT LANE</span>
+          <small>X &lt; 0.40</small>
+        </div>
+        <div class="cam-zone-banner banner-center" id="zone-banner-center">
+          <span>● CENTER LANE</span>
+          <small>0.40 - 0.60</small>
+        </div>
+        <div class="cam-zone-banner banner-right" id="zone-banner-right">
+          <span>RIGHT LANE ▶</span>
+          <small>X &gt; 0.60</small>
         </div>
 
-        <div class="tracking-feed-viewport" id="tp-feed-mount">
-          <!-- Video Element (mirrored) -->
-          <video id="tp-video" class="tracking-video" autoplay playsinline muted></video>
+        <!-- Jump & Slide Horizontal Threshold Markers -->
+        <div class="cam-threshold-tag tag-jump" id="tag-jump">
+          <span>▲ JUMP ZONE (Y &lt; 0.35)</span>
+        </div>
+        <div class="cam-threshold-tag tag-slide" id="tag-slide">
+          <span>▼ SLIDE ZONE (Y &gt; 0.65)</span>
+        </div>
 
-          <!-- Transparent Vision Overlay Canvas -->
-          <canvas id="tp-canvas" class="tracking-canvas"></canvas>
+        <!-- Floating Action Flash Badge -->
+        <div class="cam-action-flash hidden" id="tp-action-flash">
+          <span class="flash-icon" id="tp-flash-icon">🏃</span>
+          <span class="flash-text" id="tp-flash-text">RUNNING</span>
+        </div>
 
-          <!-- Zone Overlay Markers -->
-          <div class="lane-zone-tag tag-left" id="zone-tag-left">LEFT LANE</div>
-          <div class="lane-zone-tag tag-center" id="zone-tag-center">CENTER LANE</div>
-          <div class="lane-zone-tag tag-right" id="zone-tag-right">RIGHT LANE</div>
-
-          <div class="vert-zone-line line-jump" id="zone-line-jump">
-            <span>▲ JUMP ZONE (Y &lt; 0.35)</span>
-          </div>
-          <div class="vert-zone-line line-slide" id="zone-line-slide">
-            <span>▼ SLIDE ZONE (Y &gt; 0.65)</span>
+        <!-- Camera Standby / Activation Overlay (shown before webcam starts) -->
+        <div class="cam-standby-overlay" id="tp-standby-overlay">
+          <div class="standby-card glass-panel">
+            <div class="standby-icon">📷</div>
+            <h3 class="standby-title">LIVE HAND CAMERA INTERFACE</h3>
+            <p class="standby-desc">Control the 3D subway runner with your real hand movements captured through your laptop webcam.</p>
+            <button id="btn-activate-camera" class="btn btn-primary btn-glow">
+              <span>▶ START CAMERA FEED</span>
+            </button>
+            <div class="standby-hint">
+              <span>👈 Move Left</span> &bull; <span>🖐️ Center</span> &bull; <span>👉 Move Right</span> &bull; <span>👆 Jump</span> &bull; <span>👇 Slide</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Real-Time Telemetry Dashboard -->
-      <div class="tracking-telemetry-container">
-        <!-- 1. Active Lane Status Indicator -->
-        <div class="telemetry-card lane-card">
-          <div class="card-caption">CURRENT STEERING LANE</div>
-          <div class="lane-indicator-strip">
-            <div class="lane-block" id="lane-block-left">
-              <span class="lane-arrow">◀</span>
-              <span class="lane-name">LEFT</span>
-              <span class="lane-id">LANE -1</span>
+      <!-- 3. Bottom Telemetry & Steering Control Drawer -->
+      <div class="cam-telemetry-drawer">
+        <!-- Interactive 3-Lane Selector Strip -->
+        <div class="cam-lane-strip">
+          <div class="cam-lane-tile" id="tile-lane-left">
+            <span class="tile-arrow">◀</span>
+            <div class="tile-text">
+              <strong>LEFT LANE</strong>
+              <small>LANE -1</small>
             </div>
-            <div class="lane-block active" id="lane-block-center">
-              <span class="lane-arrow">●</span>
-              <span class="lane-name">CENTER</span>
-              <span class="lane-id">LANE 0</span>
+          </div>
+          <div class="cam-lane-tile active" id="tile-lane-center">
+            <span class="tile-arrow">●</span>
+            <div class="tile-text">
+              <strong>CENTER LANE</strong>
+              <small>LANE 0</small>
             </div>
-            <div class="lane-block" id="lane-block-right">
-              <span class="lane-arrow">▶</span>
-              <span class="lane-name">RIGHT</span>
-              <span class="lane-id">LANE +1</span>
+          </div>
+          <div class="cam-lane-tile" id="tile-lane-right">
+            <span class="tile-arrow">▶</span>
+            <div class="tile-text">
+              <strong>RIGHT LANE</strong>
+              <small>LANE +1</small>
             </div>
           </div>
         </div>
 
-        <!-- 2. Detected Motion Action Card -->
-        <div class="telemetry-card action-card">
-          <div class="card-caption">DETECTED GESTURE ACTION</div>
-          <div class="action-display-pill" id="tp-action-pill">
-            <span class="action-icon" id="tp-action-icon">🏃</span>
-            <span class="action-label" id="tp-action-text">RUNNING FORWARD</span>
+        <!-- Hand Position Metrics & Status Row -->
+        <div class="cam-metrics-row">
+          <div class="metric-gauge">
+            <div class="gauge-header">
+              <span>STEERING (X)</span>
+              <span id="metric-x-val">0.50</span>
+            </div>
+            <div class="gauge-track">
+              <div class="gauge-fill" id="metric-x-bar" style="width: 50%;"></div>
+              <div class="gauge-notch notch-center"></div>
+            </div>
           </div>
-        </div>
 
-        <!-- 3. Coordinates & Tracking Confidence -->
-        <div class="telemetry-card coords-card">
-          <div class="card-caption">HAND POSITION TELEMETRY</div>
-          <div class="coords-meters-grid">
-            <div class="coord-meter-col">
-              <div class="meter-label">
-                <span>HORIZONTAL (X)</span>
-                <span id="tp-x-val">0.50</span>
-              </div>
-              <div class="meter-bar-track">
-                <div class="meter-bar-fill" id="tp-x-bar" style="width: 50%;"></div>
-                <div class="meter-center-marker"></div>
-              </div>
+          <div class="metric-gauge">
+            <div class="gauge-header">
+              <span>ELEVATION (Y)</span>
+              <span id="metric-y-val">0.50</span>
             </div>
-
-            <div class="coord-meter-col">
-              <div class="meter-label">
-                <span>VERTICAL (Y)</span>
-                <span id="tp-y-val">0.50</span>
-              </div>
-              <div class="meter-bar-track">
-                <div class="meter-bar-fill meter-fill-cyan" id="tp-y-bar" style="width: 50%;"></div>
-                <div class="meter-center-marker"></div>
-              </div>
+            <div class="gauge-track">
+              <div class="gauge-fill gauge-fill-cyan" id="metric-y-bar" style="width: 50%;"></div>
+              <div class="gauge-notch notch-jump"></div>
+              <div class="gauge-notch notch-slide"></div>
             </div>
+          </div>
 
-            <div class="coord-meter-col">
-              <div class="meter-label">
-                <span>CONFIDENCE</span>
-                <span id="tp-conf-val">100%</span>
-              </div>
-              <div class="meter-bar-track">
-                <div class="meter-bar-fill meter-fill-green" id="tp-conf-bar" style="width: 100%;"></div>
-              </div>
+          <div class="metric-gauge gauge-conf">
+            <div class="gauge-header">
+              <span>TRACKING</span>
+              <span id="metric-conf-val">100%</span>
+            </div>
+            <div class="gauge-track">
+              <div class="gauge-fill gauge-fill-green" id="metric-conf-bar" style="width: 100%;"></div>
             </div>
           </div>
         </div>
 
-        <!-- 4. Quick Gesture Control Reference Guide -->
-        <div class="telemetry-card guide-card">
-          <div class="card-caption">HAND MOTION CONTROLS GUIDE</div>
-          <div class="motion-guide-grid">
-            <div class="guide-item">
-              <span class="guide-icon">🖐️</span>
-              <div class="guide-info">
-                <strong>Hand Centered</strong>
-                <span>Stay in Center Lane</span>
-              </div>
-            </div>
-            <div class="guide-item">
-              <span class="guide-icon">👈</span>
-              <div class="guide-info">
-                <strong>Move Hand Left</strong>
-                <span>Steer to Left Lane</span>
-              </div>
-            </div>
-            <div class="guide-item">
-              <span class="guide-icon">👉</span>
-              <div class="guide-info">
-                <strong>Move Hand Right</strong>
-                <span>Steer to Right Lane</span>
-              </div>
-            </div>
-            <div class="guide-item">
-              <span class="guide-icon">👆</span>
-              <div class="guide-info">
-                <strong>Move Hand Up</strong>
-                <span>Jump Over Barriers</span>
-              </div>
-            </div>
-            <div class="guide-item">
-              <span class="guide-icon">👇</span>
-              <div class="guide-info">
-                <strong>Move Hand Down</strong>
-                <span>Slide Under Hazards</span>
-              </div>
-            </div>
+        <!-- Quick Settings & Controls Strip -->
+        <div class="cam-controls-strip">
+          <div class="ctrl-group">
+            <label for="cam-sensitivity-select">SENSITIVITY:</label>
+            <select id="cam-sensitivity-select" class="cam-select">
+              <option value="low">Low (Deliberate)</option>
+              <option value="medium" selected>Medium (Standard)</option>
+              <option value="high">High (Quick Swipe)</option>
+            </select>
           </div>
-        </div>
 
-        <!-- 5. Settings Strip -->
-        <div class="telemetry-card settings-card">
-          <div class="card-caption">TRACKING SETTINGS</div>
-          <div class="tp-settings-row">
-            <div class="tp-setting-item">
-              <label for="tp-sensitivity-select">SENSITIVITY:</label>
-              <select id="tp-sensitivity-select" class="tp-select">
-                <option value="low">Low (Deliberate)</option>
-                <option value="medium" selected>Medium (Balanced)</option>
-                <option value="high">High (Quick Swipe)</option>
-              </select>
-            </div>
-
-            <div class="tp-setting-item">
-              <label for="tp-camera-select">CAMERA:</label>
-              <select id="tp-camera-select" class="tp-select">
-                <option value="default">Default Camera</option>
-              </select>
-            </div>
+          <div class="ctrl-group">
+            <label for="cam-device-select">CAMERA INPUT:</label>
+            <select id="cam-device-select" class="cam-select">
+              <option value="default">Default Camera</option>
+            </select>
           </div>
         </div>
       </div>
@@ -239,33 +216,45 @@ export class TrackingPanel {
     this.canvas = this.wrapper.querySelector('#tp-canvas');
     this.ctx = this.canvas.getContext('2d');
     this.feedMount = this.wrapper.querySelector('#tp-feed-mount');
+    this.standbyOverlay = this.wrapper.querySelector('#tp-standby-overlay');
 
     this.statusBadge = this.wrapper.querySelector('#tp-status-badge');
     this.statusText = this.wrapper.querySelector('#tp-status-text');
+    this.recDot = this.wrapper.querySelector('#tp-rec-dot');
 
-    this.laneBlockLeft = this.wrapper.querySelector('#lane-block-left');
-    this.laneBlockCenter = this.wrapper.querySelector('#lane-block-center');
-    this.laneBlockRight = this.wrapper.querySelector('#lane-block-right');
+    this.zoneBannerLeft = this.wrapper.querySelector('#zone-banner-left');
+    this.zoneBannerCenter = this.wrapper.querySelector('#zone-banner-center');
+    this.zoneBannerRight = this.wrapper.querySelector('#zone-banner-right');
+    this.tagJump = this.wrapper.querySelector('#tag-jump');
+    this.tagSlide = this.wrapper.querySelector('#tag-slide');
 
-    this.actionPill = this.wrapper.querySelector('#tp-action-pill');
-    this.actionIcon = this.wrapper.querySelector('#tp-action-icon');
-    this.actionText = this.wrapper.querySelector('#tp-action-text');
+    this.tileLaneLeft = this.wrapper.querySelector('#tile-lane-left');
+    this.tileLaneCenter = this.wrapper.querySelector('#tile-lane-center');
+    this.tileLaneRight = this.wrapper.querySelector('#tile-lane-right');
 
-    this.xVal = this.wrapper.querySelector('#tp-x-val');
-    this.xBar = this.wrapper.querySelector('#tp-x-bar');
-    this.yVal = this.wrapper.querySelector('#tp-y-val');
-    this.yBar = this.wrapper.querySelector('#tp-y-bar');
-    this.confVal = this.wrapper.querySelector('#tp-conf-val');
-    this.confBar = this.wrapper.querySelector('#tp-conf-bar');
+    this.actionFlash = this.wrapper.querySelector('#tp-action-flash');
+    this.flashIcon = this.wrapper.querySelector('#tp-flash-icon');
+    this.flashText = this.wrapper.querySelector('#tp-flash-text');
 
-    this.zoneTagLeft = this.wrapper.querySelector('#zone-tag-left');
-    this.zoneTagCenter = this.wrapper.querySelector('#zone-tag-center');
-    this.zoneTagRight = this.wrapper.querySelector('#zone-tag-right');
-    this.zoneLineJump = this.wrapper.querySelector('#zone-line-jump');
-    this.zoneLineSlide = this.wrapper.querySelector('#zone-line-slide');
+    this.metricXVal = this.wrapper.querySelector('#metric-x-val');
+    this.metricXBar = this.wrapper.querySelector('#metric-x-bar');
+    this.metricYVal = this.wrapper.querySelector('#metric-y-val');
+    this.metricYBar = this.wrapper.querySelector('#metric-y-bar');
+    this.metricConfVal = this.wrapper.querySelector('#metric-conf-val');
+    this.metricConfBar = this.wrapper.querySelector('#metric-conf-bar');
   }
 
   bindEvents() {
+    // Start Camera Feed button
+    const btnActivate = this.wrapper.querySelector('#btn-activate-camera');
+    if (btnActivate) {
+      btnActivate.addEventListener('click', () => {
+        if (this.callbacks.onStartCamera) {
+          this.callbacks.onStartCamera();
+        }
+      });
+    }
+
     // Swap Sides
     const btnSwap = this.wrapper.querySelector('#btn-tp-swap');
     if (btnSwap) {
@@ -285,15 +274,15 @@ export class TrackingPanel {
     }
 
     // Sensitivity Select
-    const sensSelect = this.wrapper.querySelector('#tp-sensitivity-select');
+    const sensSelect = this.wrapper.querySelector('#cam-sensitivity-select');
     if (sensSelect && this.callbacks.onSensitivityChange) {
       sensSelect.addEventListener('change', (e) => {
         this.callbacks.onSensitivityChange(e.target.value);
       });
     }
 
-    // Camera Select
-    const camSelect = this.wrapper.querySelector('#tp-camera-select');
+    // Camera Input Select
+    const camSelect = this.wrapper.querySelector('#cam-device-select');
     if (camSelect && this.callbacks.onCameraChange) {
       camSelect.addEventListener('change', (e) => {
         this.callbacks.onCameraChange(e.target.value);
@@ -326,8 +315,18 @@ export class TrackingPanel {
     return this.video;
   }
 
+  setCameraActive(active) {
+    this.isCameraActive = active;
+    if (this.standbyOverlay) {
+      this.standbyOverlay.style.display = active ? 'none' : 'flex';
+    }
+    if (this.recDot) {
+      this.recDot.classList.toggle('rec-live', active);
+    }
+  }
+
   updateCameraList(cameras) {
-    const camSelect = this.wrapper.querySelector('#tp-camera-select');
+    const camSelect = this.wrapper.querySelector('#cam-device-select');
     if (!camSelect || !cameras || cameras.length === 0) return;
 
     camSelect.innerHTML = '';
@@ -343,73 +342,80 @@ export class TrackingPanel {
     const app = document.getElementById('app-container');
     if (app) {
       app.classList.toggle('layout-swapped');
-      this.isSwapped = app.classList.contains('layout-swapped');
     }
   }
 
   /**
-   * Main render update called each vision frame
+   * Main render update called each vision frame from Game.js
    */
   render(detection, controllerState = 'IDLE', currentLane = 0, lastAction = null) {
     this.controllerState = controllerState;
     this.currentLane = currentLane;
 
-    // 1. Update Canvas Skeleton & Zones
+    // Ensure standby overlay is hidden once we receive frames
+    if (detection || (this.video && this.video.readyState >= 2)) {
+      if (this.standbyOverlay && this.standbyOverlay.style.display !== 'none') {
+        this.setCameraActive(true);
+      }
+    }
+
+    // 1. Render Overlay Canvas (Skeleton, Bones, Reticle, Zones)
     this.renderCanvas(detection);
 
-    // 2. Update Lane Blocks
-    this.updateLaneBlocks(currentLane);
+    // 2. Update Interactive Lane Indicator Tiles
+    this.updateLaneTiles(currentLane);
 
-    // 3. Update Status Badge
-    this.updateStatusBadge(controllerState, detection && detection.detected);
+    // 3. Update Status Header
+    this.updateStatusHeader(controllerState, detection && detection.detected);
 
-    // 4. Update Telemetry Coordinates
+    // 4. Update Position Metrics & Action Flash
     if (detection && detection.detected && detection.palmCenter) {
       const pc = detection.palmCenter;
       const xPercent = Math.round(pc.x * 100);
       const yPercent = Math.round(pc.y * 100);
       const confPercent = Math.round((detection.confidence || 0.95) * 100);
 
-      this.xVal.textContent = pc.x.toFixed(2);
-      this.xBar.style.width = `${xPercent}%`;
+      this.metricXVal.textContent = pc.x.toFixed(2);
+      this.metricXBar.style.width = `${xPercent}%`;
 
-      this.yVal.textContent = pc.y.toFixed(2);
-      this.yBar.style.width = `${yPercent}%`;
+      this.metricYVal.textContent = pc.y.toFixed(2);
+      this.metricYBar.style.width = `${yPercent}%`;
 
-      this.confVal.textContent = `${confPercent}%`;
-      this.confBar.style.width = `${confPercent}%`;
+      this.metricConfVal.textContent = `${confPercent}%`;
+      this.metricConfBar.style.width = `${confPercent}%`;
 
-      // Update Zone Tags Highlight
-      this.zoneTagLeft.classList.toggle('active', pc.x < 0.40);
-      this.zoneTagCenter.classList.toggle('active', pc.x >= 0.40 && pc.x <= 0.60);
-      this.zoneTagRight.classList.toggle('active', pc.x > 0.60);
-      this.zoneLineJump.classList.toggle('active', pc.y < 0.35);
-      this.zoneLineSlide.classList.toggle('active', pc.y > 0.65);
+      // Highlight active zone banners
+      this.zoneBannerLeft.classList.toggle('active', pc.x < 0.40);
+      this.zoneBannerCenter.classList.toggle('active', pc.x >= 0.40 && pc.x <= 0.60);
+      this.zoneBannerRight.classList.toggle('active', pc.x > 0.60);
+      this.tagJump.classList.toggle('active', pc.y < 0.35);
+      this.tagSlide.classList.toggle('active', pc.y > 0.65);
 
-      // Determine Action label
+      // Determine active action
       if (pc.y < 0.35) {
-        this.setAction('⬆️', 'JUMPING (UPWARD)', 'action-jump');
+        this.flashAction('⬆️', 'JUMPING UP', 'flash-jump');
       } else if (pc.y > 0.65) {
-        this.setAction('⬇️', 'SLIDING (DOWNWARD)', 'action-slide');
+        this.flashAction('⬇️', 'SLIDING DOWN', 'flash-slide');
       } else if (pc.x < 0.40) {
-        this.setAction('⬅️', 'STEERING LEFT', 'action-left');
+        this.flashAction('⬅️', 'STEERING LEFT', 'flash-left');
       } else if (pc.x > 0.60) {
-        this.setAction('➡️', 'STEERING RIGHT', 'action-right');
+        this.flashAction('➡️', 'STEERING RIGHT', 'flash-right');
       } else {
-        this.setAction('🏃', 'RUNNING FORWARD', 'action-run');
+        this.flashAction('🏃', 'RUNNING CENTER', 'flash-run');
       }
     } else {
-      this.xVal.textContent = '--';
-      this.yVal.textContent = '--';
-      this.confVal.textContent = '0%';
-      this.confBar.style.width = '0%';
-      this.setAction('✋', 'SHOW HAND TO CAMERA', 'action-wait');
+      this.metricXVal.textContent = '--';
+      this.metricYVal.textContent = '--';
+      this.metricConfVal.textContent = '0%';
+      this.metricConfBar.style.width = '0%';
 
-      this.zoneTagLeft.classList.remove('active');
-      this.zoneTagCenter.classList.remove('active');
-      this.zoneTagRight.classList.remove('active');
-      this.zoneLineJump.classList.remove('active');
-      this.zoneLineSlide.classList.remove('active');
+      this.zoneBannerLeft.classList.remove('active');
+      this.zoneBannerCenter.classList.remove('active');
+      this.zoneBannerRight.classList.remove('active');
+      this.tagJump.classList.remove('active');
+      this.tagSlide.classList.remove('active');
+
+      this.flashAction('✋', 'SHOW HAND IN FRAME', 'flash-wait');
     }
   }
 
@@ -421,31 +427,53 @@ export class TrackingPanel {
 
     this.ctx.clearRect(0, 0, w, h);
 
-    // 1. Draw Lane Steering Guide Dividers (Left at 40%, Right at 60%)
-    this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
-    this.ctx.lineWidth = 1.5;
-    this.ctx.setLineDash([6, 6]);
+    const hasHand = detection && detection.detected && detection.palmCenter;
+    const px = hasHand ? detection.palmCenter.x : 0.5;
 
-    // Left Lane boundary line
+    // 1. Draw Tinted Steering Zone Columns
+    // Left Zone (0 to 40%)
+    if (hasHand && px < 0.40) {
+      this.ctx.fillStyle = 'rgba(255, 0, 85, 0.16)';
+      this.ctx.fillRect(0, 0, w * 0.40, h);
+    }
+
+    // Center Zone (40% to 60%)
+    if (hasHand && px >= 0.40 && px <= 0.60) {
+      this.ctx.fillStyle = 'rgba(0, 240, 255, 0.12)';
+      this.ctx.fillRect(w * 0.40, 0, w * 0.20, h);
+    }
+
+    // Right Zone (60% to 100%)
+    if (hasHand && px > 0.60) {
+      this.ctx.fillStyle = 'rgba(255, 215, 0, 0.15)';
+      this.ctx.fillRect(w * 0.60, 0, w * 0.40, h);
+    }
+
+    // 2. Draw Lane Boundary Divider Lines
+    this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.40)';
+    this.ctx.lineWidth = 2.0;
+    this.ctx.setLineDash([8, 6]);
+
+    // Left Lane Boundary Line
     this.ctx.beginPath();
     this.ctx.moveTo(w * 0.40, 0);
     this.ctx.lineTo(w * 0.40, h);
     this.ctx.stroke();
 
-    // Right Lane boundary line
+    // Right Lane Boundary Line
     this.ctx.beginPath();
     this.ctx.moveTo(w * 0.60, 0);
     this.ctx.lineTo(w * 0.60, h);
     this.ctx.stroke();
 
-    // Jump & Slide Horizontal Guide Lines
-    this.ctx.strokeStyle = 'rgba(255, 234, 0, 0.35)';
+    // 3. Draw Jump and Slide Threshold Lines
+    this.ctx.strokeStyle = 'rgba(0, 255, 136, 0.45)';
     this.ctx.beginPath();
     this.ctx.moveTo(0, h * 0.35);
     this.ctx.lineTo(w, h * 0.35);
     this.ctx.stroke();
 
-    this.ctx.strokeStyle = 'rgba(255, 107, 0, 0.35)';
+    this.ctx.strokeStyle = 'rgba(255, 107, 0, 0.45)';
     this.ctx.beginPath();
     this.ctx.moveTo(0, h * 0.65);
     this.ctx.lineTo(w, h * 0.65);
@@ -453,31 +481,34 @@ export class TrackingPanel {
 
     this.ctx.setLineDash([]);
 
-    // If no hand detected, draw waiting hint
+    // If no hand detected, render subtle search crosshair in center
     if (!detection || !detection.detected || !detection.landmarks) {
-      this.ctx.fillStyle = 'rgba(11, 17, 30, 0.65)';
-      this.ctx.fillRect(w / 2 - 120, h / 2 - 25, 240, 50);
-      this.ctx.strokeStyle = '#00f0ff';
+      this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.3)';
       this.ctx.lineWidth = 1;
-      this.ctx.strokeRect(w / 2 - 120, h / 2 - 25, 240, 50);
+      this.ctx.beginPath();
+      this.ctx.arc(w / 2, h / 2, 36, 0, Math.PI * 2);
+      this.ctx.moveTo(w / 2 - 50, h / 2);
+      this.ctx.lineTo(w / 2 + 50, h / 2);
+      this.ctx.moveTo(w / 2, h / 2 - 50);
+      this.ctx.lineTo(w / 2, h / 2 + 50);
+      this.ctx.stroke();
 
       this.ctx.fillStyle = '#00f0ff';
-      this.ctx.font = 'bold 14px system-ui';
+      this.ctx.font = 'bold 13px system-ui';
       this.ctx.textAlign = 'center';
-      this.ctx.fillText('✋ PLACE HAND IN CAMERA VIEW', w / 2, h / 2 + 5);
+      this.ctx.fillText('✋ PLACE HAND IN CAMERA VIEW', w / 2, h / 2 + 65);
       return;
     }
 
     const landmarks = detection.landmarks;
-    // Mirrored coordinates matching video scaleX(-1)
-    const toCanvasX = (rawX) => (1.0 - rawX) * w;
+    const toCanvasX = (rawX) => (1.0 - rawX) * w; // Mirrored coordinate matching video scaleX(-1)
     const toCanvasY = (rawY) => rawY * h;
 
-    // 2. Draw Hand Skeleton Bones
+    // 4. Draw Hand Skeleton Bones
     this.ctx.strokeStyle = '#00f0ff';
-    this.ctx.lineWidth = 3.0;
+    this.ctx.lineWidth = 3.5;
     this.ctx.shadowColor = '#00f0ff';
-    this.ctx.shadowBlur = 8;
+    this.ctx.shadowBlur = 10;
 
     for (const [startIdx, endIdx] of this.CONNECTIONS) {
       const p1 = landmarks[startIdx];
@@ -492,85 +523,110 @@ export class TrackingPanel {
 
     this.ctx.shadowBlur = 0;
 
-    // 3. Draw Landmark Joint Nodes
+    // 5. Draw 21 Landmark Nodes
     for (let i = 0; i < landmarks.length; i++) {
       const lm = landmarks[i];
       const isTip = [4, 8, 12, 16, 20].includes(i);
+      const isWrist = (i === 0);
 
-      this.ctx.fillStyle = isTip ? '#ff0055' : '#00ff88';
-      this.ctx.beginPath();
-      this.ctx.arc(toCanvasX(lm.x), toCanvasY(lm.y), isTip ? 5.5 : 3.5, 0, Math.PI * 2);
-      this.ctx.fill();
+      if (isTip) {
+        // Fingertip radiant beacon
+        this.ctx.fillStyle = '#ff0055';
+        this.ctx.beginPath();
+        this.ctx.arc(toCanvasX(lm.x), toCanvasY(lm.y), 6.5, 0, Math.PI * 2);
+        this.ctx.fill();
 
-      this.ctx.strokeStyle = '#ffffff';
-      this.ctx.lineWidth = 1;
-      this.ctx.stroke();
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+      } else if (isWrist) {
+        // Wrist anchor
+        this.ctx.fillStyle = '#ffd700';
+        this.ctx.beginPath();
+        this.ctx.arc(toCanvasX(lm.x), toCanvasY(lm.y), 6, 0, Math.PI * 2);
+        this.ctx.fill();
+      } else {
+        // Knuckle joints
+        this.ctx.fillStyle = '#00ff88';
+        this.ctx.beginPath();
+        this.ctx.arc(toCanvasX(lm.x), toCanvasY(lm.y), 4.5, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        this.ctx.strokeStyle = '#050b14';
+        this.ctx.lineWidth = 1;
+        this.ctx.stroke();
+      }
     }
 
-    // 4. Draw Palm Center Reticle
+    // 6. Draw Palm Center Targeting Reticle
     if (detection.palmCenter) {
       const pc = detection.palmCenter;
       const screenX = pc.x * w;
       const screenY = pc.y * h;
 
-      // Glow circle
-      this.ctx.fillStyle = 'rgba(255, 234, 0, 0.45)';
+      // Glow pulse
+      this.ctx.fillStyle = 'rgba(255, 234, 0, 0.35)';
       this.ctx.beginPath();
-      this.ctx.arc(screenX, screenY, 14, 0, Math.PI * 2);
+      this.ctx.arc(screenX, screenY, 18, 0, Math.PI * 2);
       this.ctx.fill();
 
-      // Outer targeting ring
-      this.ctx.strokeStyle = '#ffffff';
+      // Outer targeting crosshair
+      this.ctx.strokeStyle = '#ffd700';
       this.ctx.lineWidth = 2.0;
       this.ctx.beginPath();
-      this.ctx.arc(screenX, screenY, 14, 0, Math.PI * 2);
+      this.ctx.arc(screenX, screenY, 16, 0, Math.PI * 2);
+      this.ctx.moveTo(screenX - 22, screenY);
+      this.ctx.lineTo(screenX + 22, screenY);
+      this.ctx.moveTo(screenX, screenY - 22);
+      this.ctx.lineTo(screenX, screenY + 22);
       this.ctx.stroke();
 
-      // Inner dot
+      // Center point
       this.ctx.fillStyle = '#ff0055';
       this.ctx.beginPath();
       this.ctx.arc(screenX, screenY, 5, 0, Math.PI * 2);
       this.ctx.fill();
 
-      // Coordinate banner
-      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-      this.ctx.fillRect(screenX + 16, screenY - 12, 76, 22);
+      // Live Coordinates HUD Tag
+      this.ctx.fillStyle = 'rgba(7, 10, 18, 0.88)';
+      this.ctx.fillRect(screenX + 22, screenY - 14, 86, 24);
+      this.ctx.strokeStyle = '#00f0ff';
+      this.ctx.lineWidth = 1;
+      this.ctx.strokeRect(screenX + 22, screenY - 14, 86, 24);
+
       this.ctx.fillStyle = '#00f0ff';
       this.ctx.font = 'bold 11px system-ui';
       this.ctx.textAlign = 'left';
-      this.ctx.fillText(`X:${pc.x.toFixed(2)} Y:${pc.y.toFixed(2)}`, screenX + 20, screenY + 3);
+      this.ctx.fillText(`X:${pc.x.toFixed(2)} Y:${pc.y.toFixed(2)}`, screenX + 28, screenY + 2);
     }
   }
 
-  updateLaneBlocks(currentLane) {
-    if (this.laneBlockLeft) this.laneBlockLeft.classList.toggle('active', currentLane === -1);
-    if (this.laneBlockCenter) this.laneBlockCenter.classList.toggle('active', currentLane === 0);
-    if (this.laneBlockRight) this.laneBlockRight.classList.toggle('active', currentLane === 1);
+  updateLaneTiles(currentLane) {
+    if (this.tileLaneLeft) this.tileLaneLeft.classList.toggle('active', currentLane === -1);
+    if (this.tileLaneCenter) this.tileLaneCenter.classList.toggle('active', currentLane === 0);
+    if (this.tileLaneRight) this.tileLaneRight.classList.toggle('active', currentLane === 1);
   }
 
-  updateStatusBadge(state, isDetected) {
+  updateStatusHeader(state, isDetected) {
     if (!this.statusBadge || !this.statusText) return;
 
-    this.statusBadge.className = 'tracking-status-badge';
-
     if (!isDetected || state === 'LOST') {
-      this.statusBadge.classList.add('badge-lost');
+      this.statusBadge.className = 'cam-status-pill status-lost';
       this.statusText.textContent = 'NO HAND DETECTED';
     } else if (state === 'REARMING') {
-      this.statusBadge.classList.add('badge-rearm');
+      this.statusBadge.className = 'cam-status-pill status-rearm';
       this.statusText.textContent = 'RETURNING TO NEUTRAL';
     } else {
-      this.statusBadge.classList.add('badge-active');
-      this.statusText.textContent = 'LOCKED & TRACKING';
+      this.statusBadge.className = 'cam-status-pill status-active';
+      this.statusText.textContent = 'HAND TRACKING LOCKED';
     }
   }
 
-  setAction(icon, text, styleClass) {
-    if (this.actionIcon) this.actionIcon.textContent = icon;
-    if (this.actionText) this.actionText.textContent = text;
-    if (this.actionPill) {
-      this.actionPill.className = `action-display-pill ${styleClass || ''}`;
-    }
+  flashAction(icon, text, styleClass) {
+    if (!this.actionFlash) return;
+    this.flashIcon.textContent = icon;
+    this.flashText.textContent = text;
+    this.actionFlash.className = `cam-action-flash ${styleClass || ''}`;
   }
 
   dispose() {
