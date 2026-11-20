@@ -321,8 +321,17 @@ export class TrackingPanel {
       this.standbyOverlay.style.display = active ? 'none' : 'flex';
     }
     if (this.recDot) {
+      this.recDot.classList.toggle('live', active);
       this.recDot.classList.toggle('rec-live', active);
     }
+  }
+
+  startCameraFeed() {
+    this.setCameraActive(true);
+  }
+
+  stopCameraFeed() {
+    this.setCameraActive(false);
   }
 
   updateCameraList(cameras) {

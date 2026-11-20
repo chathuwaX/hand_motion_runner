@@ -156,7 +156,9 @@ export class Game {
         onCameraChange: async (deviceId) => {
           const videoEl = this.trackingPanel.getVideoElement();
           await this.cameraManager.startCamera(videoEl, deviceId);
-          this.trackingPanel.startCameraFeed();
+          if (this.trackingPanel?.startCameraFeed) {
+            this.trackingPanel.startCameraFeed();
+          }
         }
       });
     }
@@ -249,7 +251,9 @@ export class Game {
       const trackingVideo = this.trackingPanel ? this.trackingPanel.getVideoElement() : null;
       if (trackingVideo) {
         await this.cameraManager.startCamera(trackingVideo);
-        this.trackingPanel.startCameraFeed();
+        if (this.trackingPanel?.startCameraFeed) {
+          this.trackingPanel.startCameraFeed();
+        }
       }
 
       // 2. Initialize MediaPipe HandLandmarker if needed
@@ -300,6 +304,9 @@ export class Game {
     this.calibrationScreen.hide();
     this.cameraManager.stopCamera();
     this.stopVisionLoop();
+    if (this.trackingPanel?.stopCameraFeed) {
+      this.trackingPanel.stopCameraFeed();
+    }
     this.mainMenu.show();
     gameStateManager.setState(GameStates.MAIN_MENU);
   }
@@ -366,6 +373,9 @@ export class Game {
 
     this.cameraManager.stopCamera();
     this.stopVisionLoop();
+    if (this.trackingPanel?.stopCameraFeed) {
+      this.trackingPanel.stopCameraFeed();
+    }
 
     gameStateManager.setState(GameStates.MAIN_MENU);
   }
